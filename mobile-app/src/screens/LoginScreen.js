@@ -14,6 +14,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { loginUser, resetUserPassword, logoutUser } from '../services/AuthService';
+import { db } from '../../firebaseConfig';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 const MARINE_LOGO = require('../../assets/marinepark-logo.png');
 
@@ -42,6 +44,17 @@ export default function LoginScreen() {
         return; 
       }
       if (role === 'admin') {
+
+        try {
+          await addDoc(collection(db, "auditLogs"), {
+            action: "Log Masuk Sistem",
+            details: `Admin (${email}) telah berjaya log masuk ke Papan Pemuka.`,
+            timestamp: serverTimestamp()
+          });
+        } catch (logError) {
+          console.log("Gagal merekod log aktiviti:", logError);
+        }
+        
         alert("Selamat Datang, Admin!");
         router.replace('/admindashboard'); 
       } else {

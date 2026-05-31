@@ -46,10 +46,14 @@ export default function NotificationScreen() {
   const handlePressNotif = async (item) => {
     setSelectedNotif(item);
     setIsModalVisible(true);
+  };
 
-    if (!item.isRead) {
+  const handleCloseModal = async () => {
+    setIsModalVisible(false);
+
+    if (selectedNotif && !selectedNotif.isRead) {
       try {
-        const notifRef = doc(db, "notifications", item.id);
+        const notifRef = doc(db, "notifications", selectedNotif.id);
         await updateDoc(notifRef, { isRead: true });
       } catch (error) {
         console.error("Error marking read:", error);
@@ -162,16 +166,22 @@ export default function NotificationScreen() {
         </TouchableOpacity>
       </View>
 
-      <FlatList
-        data={notifications}
-        keyExtractor={(item) => item.id}
-        renderItem={renderNotification}
-        contentContainerStyle={styles.listContainer}
-        ListEmptyComponent={!loading && <Text style={styles.emptyText}>Tiada notifikasi.</Text>}
-      />
+      {loading ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color="#0077B6" />
+        </View>
+      ) : (
+        <FlatList
+          data={notifications}
+          keyExtractor={(item) => item.id}
+          renderItem={renderNotification}
+          contentContainerStyle={styles.listContainer}
+          ListEmptyComponent={<Text style={styles.emptyText}>Tiada notifikasi.</Text>}
+        />
+      )}
 
       <Modal visible={isModalVisible} transparent={true} animationType="fade">
-        <TouchableWithoutFeedback onPress={() => setIsModalVisible(false)}>
+        <TouchableWithoutFeedback onPress={handleCloseModal}>
           <View style={styles.modalOverlay}>
             <TouchableWithoutFeedback>
               <View style={styles.modalContent}>
@@ -180,7 +190,8 @@ export default function NotificationScreen() {
                 </View>
                 <Text style={styles.modalTitle}>{selectedNotif?.title}</Text>
                 <Text style={styles.modalBody}>{selectedNotif?.body}</Text>
-                <TouchableOpacity style={styles.closeBtn} onPress={() => setIsModalVisible(false)}>
+                
+                <TouchableOpacity style={styles.closeBtn} onPress={handleCloseModal}>
                   <Text style={styles.closeBtnText}>Tutup</Text>
                 </TouchableOpacity>
               </View>
@@ -211,13 +222,17 @@ const styles = StyleSheet.create({
   notifCard: { 
     flexDirection: 'row', 
     alignItems: 'center',
-    backgroundColor: '#FFF', 
+    backgroundColor: '#FFFFFF',
     borderRadius: 16, 
     marginBottom: 15, 
-    elevation: 1,
+    elevation: 4, 
+    shadowColor: '#03045E',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
     overflow: 'hidden' 
   },
-  notifCardUnread: { backgroundColor: '#F0F9FF', borderWidth: 1, borderColor: '#BAE6FD' },
+  notifCardUnread: { backgroundColor: '#F0F9FF' },
   
   iconBox: { width: 48, height: 48, borderRadius: 24, justifyContent: 'center', alignItems: 'center', marginRight: 15 },
   textContainer: { flex: 1 },
@@ -237,7 +252,7 @@ const styles = StyleSheet.create({
   modalContent: { width: '85%', backgroundColor: '#FFF', borderRadius: 24, padding: 25, alignItems: 'center' },
   modalIcon: { width: 80, height: 80, borderRadius: 40, justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
   modalTitle: { fontSize: 20, fontWeight: 'bold', color: '#03045E', textAlign: 'center', marginBottom: 15 },
-  modalBody: { fontSize: 15, color: '#64748B', textAlign: 'center', lineHeight: 22, marginBottom: 25 },
+  modalBody: { fontSize: 14, color: '#475569', textAlign: 'left', lineHeight: 24, marginBottom: 25, width: '100%', },
   closeBtn: { backgroundColor: '#0077B6', paddingHorizontal: 40, paddingVertical: 12, borderRadius: 12 },
   closeBtnText: { color: '#FFF', fontWeight: 'bold' }
 });

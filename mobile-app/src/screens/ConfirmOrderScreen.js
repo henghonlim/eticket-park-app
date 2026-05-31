@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, Text, StyleSheet, TouchableOpacity, 
   Image, ScrollView, Alert 
@@ -7,6 +7,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import MaintenanceOverlay from '../components/MaintenanceOverlay';
+import { db } from '../../firebaseConfig'; 
+import { doc, getDoc } from 'firebase/firestore';
 
 export default function ConfirmOrderScreen() {
   const router = useRouter();
@@ -14,6 +16,33 @@ export default function ConfirmOrderScreen() {
 
   const { parkId, parkName, date, total, adult, child, senior, oku } = params;
   const [paymentMethod, setPaymentMethod] = useState(null);
+  const [unitPrices, setUnitPrices] = useState(null);
+
+  useEffect(() => {
+    const fetchPrices = async () => {
+      if (!parkId) return;
+      try {
+        const parkDoc = await getDoc(doc(db, "parks", parkId));
+        if (parkDoc.exists()) {
+          const p = parkDoc.data().pricing;
+          if (p) {
+            const calculatedMsiaTotal = (
+              parseInt(adult || 0) * parseFloat(p.msia?.adult || 0) +
+              parseInt(child || 0) * parseFloat(p.msia?.child || 0) +
+              parseInt(senior || 0) * parseFloat(p.msia?.senior || 0) +
+              parseInt(oku || 0) * parseFloat(p.msia?.oku || 0)
+            );
+            
+            const isMsia = Math.abs(calculatedMsiaTotal - parseFloat(total)) < 0.01;
+            setUnitPrices(isMsia ? p.msia : p.intl);
+          }
+        }
+      } catch (error) {
+        console.error("Gagal mendapatkan harga:", error);
+      }
+    };
+    fetchPrices();
+  }, [parkId, adult, child, senior, oku, total]);
 
   const handleProceedToPayment = () => {
     if (!paymentMethod) {
@@ -76,11 +105,51 @@ export default function ConfirmOrderScreen() {
             </View>
             
             <View style={styles.ticketSummaryBox}>
-              <Text style={styles.ticketSummaryTitle}>Ringkasan Tiket:</Text>
-              {parseInt(adult) > 0 && <Text style={styles.ticketDetailText}>• Dewasa x {adult}</Text>}
-              {parseInt(child) > 0 && <Text style={styles.ticketDetailText}>• Kanak-kanak x {child}</Text>}
-              {parseInt(senior) > 0 && <Text style={styles.ticketDetailText}>• Warga Emas x {senior}</Text>}
-              {parseInt(oku) > 0 && <Text style={styles.ticketDetailText}>• OKU x {oku}</Text>}
+              <Text style={styles.ticketSummaryTitle}>Perincian Tiket & Harga:</Text>
+              
+              {parseInt(adult) > 0 && (
+                <View style={styles.ticketRow}>
+                  <Text style={styles.ticketDetailText}>
+                    • Dewasa <Text style={styles.ticketUnitPrice}>({adult} x RM {unitPrices ? parseFloat(unitPrices.adult).toFixed(2) : '...'})</Text>
+                  </Text>
+                  <Text style={styles.ticketSubtotalText}>
+                    RM {unitPrices ? (parseInt(adult) * parseFloat(unitPrices.adult)).toFixed(2) : '...'}
+                  </Text>
+                </View>
+              )}
+
+              {parseInt(child) > 0 && (
+                <View style={styles.ticketRow}>
+                  <Text style={styles.ticketDetailText}>
+                    • Kanak-kanak <Text style={styles.ticketUnitPrice}>({child} x RM {unitPrices ? parseFloat(unitPrices.child).toFixed(2) : '...'})</Text>
+                  </Text>
+                  <Text style={styles.ticketSubtotalText}>
+                    RM {unitPrices ? (parseInt(child) * parseFloat(unitPrices.child)).toFixed(2) : '...'}
+                  </Text>
+                </View>
+              )}
+
+              {parseInt(senior) > 0 && (
+                <View style={styles.ticketRow}>
+                  <Text style={styles.ticketDetailText}>
+                    • Warga Emas <Text style={styles.ticketUnitPrice}>({senior} x RM {unitPrices ? parseFloat(unitPrices.senior).toFixed(2) : '...'})</Text>
+                  </Text>
+                  <Text style={styles.ticketSubtotalText}>
+                    RM {unitPrices ? (parseInt(senior) * parseFloat(unitPrices.senior)).toFixed(2) : '...'}
+                  </Text>
+                </View>
+              )}
+
+              {parseInt(oku) > 0 && (
+                <View style={styles.ticketRow}>
+                  <Text style={styles.ticketDetailText}>
+                    • OKU <Text style={styles.ticketUnitPrice}>({oku} x RM {unitPrices ? parseFloat(unitPrices.oku).toFixed(2) : '...'})</Text>
+                  </Text>
+                  <Text style={styles.ticketSubtotalText}>
+                    RM {unitPrices ? (parseInt(oku) * parseFloat(unitPrices.oku)).toFixed(2) : '...'}
+                  </Text>
+                </View>
+              )}
             </View>
           </View>
         </View>
@@ -175,4 +244,7 @@ const styles = StyleSheet.create({
   totalPrice: { fontSize: 24, fontWeight: '900', color: '#0077B6' },
   checkoutBtn: { backgroundColor: '#0077B6', flexDirection: 'row', paddingVertical: 16, paddingHorizontal: 25, borderRadius: 16, alignItems: 'center', shadowColor: '#0077B6', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.3, shadowRadius: 10, elevation: 6 },
   checkoutBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: 'bold' },
+  ticketRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6, alignItems: 'center' },
+  ticketUnitPrice: { fontSize: 11, color: '#94A3B8' },
+  ticketSubtotalText: { fontSize: 13, color: '#334155', fontWeight: 'bold' },
 });

@@ -5,22 +5,23 @@ import {
   TouchableWithoutFeedback, Platform, KeyboardAvoidingView, FlatList
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context'; 
-
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import MapView, { Marker } from 'react-native-maps';
 import * as ImagePicker from 'expo-image-picker';
 import { db } from '../../firebaseConfig';
-import { collection, query, onSnapshot, doc, updateDoc, serverTimestamp, orderBy, getDoc, getDocs, where } from 'firebase/firestore';
+import { collection, query, onSnapshot, doc, updateDoc, serverTimestamp, orderBy, getDoc, getDocs, where, addDoc } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
 import { getStorage, ref, uploadString, getDownloadURL } from 'firebase/storage';
 import { addPark, getAllParks, deletePark, updatePark } from '../services/ParkService'; 
+import AdminHeader from '../components/AdminHeader';
 
 export default function TicketManageScreen() {
-  const [activeTab, setActiveTab] = useState('settings'); 
+  const params = useLocalSearchParams();
+  const [activeTab, setActiveTab] = useState(params.tab || 'settings'); 
   const [modalVisible, setModalVisible] = useState(false);
   const [loading, setLoading] = useState(false);
   const [parks, setParks] = useState([]);
-  const [isProfileMenuVisible, setIsProfileMenuVisible] = useState(false);
   const [editingParkId, setEditingParkId] = useState(null);
   const [showPicker, setShowPicker] = useState(false); 
 
@@ -68,6 +69,12 @@ export default function TicketManageScreen() {
     { label: 'WP Labuan', value: 'WP Labuan' }, { label: 'WP Putrajaya', value: 'WP Putrajaya' },
   ];
 
+  useEffect(() => {
+    if (params?.tab) {
+      setActiveTab(params.tab);
+    }
+  }, [params?.tab]);
+  
   useEffect(() => { fetchParks(); }, []);
   useEffect(() => {
     let unsubscribe;
@@ -131,12 +138,6 @@ export default function TicketManageScreen() {
       const data = await getAllParks();
       setParks(data);
     } catch (error) { console.error("Fetch error:", error); }
-  };
-
-  const handleLogout = async () => {
-    setIsProfileMenuVisible(false);
-    alert("Anda telah berjaya log keluar.");
-    router.replace('/login');
   };
 
   const handleDummyPress = (featureName) => {
@@ -319,6 +320,18 @@ export default function TicketManageScreen() {
         await addPark(finalData); 
         Alert.alert("Berjaya", "Taman Laut telah ditambah!"); 
       }
+
+      try {
+        const auth = getAuth();
+        const adminEmail = auth.currentUser?.email || 'Admin';
+        await addDoc(collection(db, "auditLogs"), {
+          action: editingParkId ? "Kemaskini Taman Laut" : "Tambah Taman Laut",
+          details: `Admin (${adminEmail}) telah ${editingParkId ? 'mengemaskini' : 'menambah'} maklumat taman: ${parkName}.`,
+          timestamp: serverTimestamp()
+        });
+      } catch (logError) {
+        console.log("Gagal log taman:", logError);
+      }
       
       setModalVisible(false); 
       clearForm(); 
@@ -356,6 +369,19 @@ export default function TicketManageScreen() {
                 status: newStatus === 'Sah' ? 'Sah' : 'Ditolak',
                 processedAt: serverTimestamp(),
               });
+            }
+
+            try {
+              const auth = getAuth();
+              const adminEmail = auth.currentUser?.email || 'Admin';
+              const actionName = newStatus === 'Sah' ? 'mengesahkan' : 'menolak';
+              await addDoc(collection(db, "auditLogs"), {
+                action: "Pengesahan Tiket",
+                details: `Admin (${adminEmail}) telah ${actionName} tiket ID: ${ticketId.slice(0, 8).toUpperCase()}.`,
+                timestamp: serverTimestamp()
+              });
+            } catch (logError) {
+              console.log("Gagal log pengesahan tiket:", logError);
             }
 
             Alert.alert("Berjaya", `Tiket dan Transaksi telah dikemaskini.`);
@@ -402,7 +428,26 @@ export default function TicketManageScreen() {
   const handleDelete = (parkId, parkName) => {
     Alert.alert("Padam Taman Laut", `Adakah anda pasti ingin memadam ${parkName}?`, [
       { text: "Batal", style: "cancel" },
-      { text: "Padam", style: "destructive", onPress: async () => { setLoading(true); await deletePark(parkId); fetchParks(); setLoading(false); }}
+      { text: "Padam", style: "destructive", onPress: async () => { 
+          setLoading(true); 
+          await deletePark(parkId); 
+
+          try {
+            const auth = getAuth();
+            const adminEmail = auth.currentUser?.email || 'Admin';
+            await addDoc(collection(db, "auditLogs"), {
+              action: "Padam Taman Laut",
+              details: `Admin (${adminEmail}) telah memadam taman laut: ${parkName}.`,
+              timestamp: serverTimestamp()
+            });
+          } catch (logError) {
+            console.log("Gagal log padam taman:", logError);
+          }
+
+          fetchParks(); 
+          setLoading(false); 
+        }
+      }
     ]);
   };
 
@@ -436,28 +481,17 @@ export default function TicketManageScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.headerTitle}>
-            {activeTab === 'records' ? 'Rekod Tiket' : 'Tetapan Taman'}
-          </Text>
-          <Text style={styles.headerSubtitle}>Pengurusan Tiket & Taman Laut</Text>
-        </View>
-        
-        <View style={styles.headerRight}>
-          {activeTab === 'settings' && (
+      <AdminHeader 
+        title={activeTab === 'records' ? 'Rekod Tiket' : 'Tetapan Taman'} 
+        subtitle="Pengurusan Tiket & Taman Laut" 
+        rightComponent={
+          activeTab === 'settings' && (
             <TouchableOpacity style={styles.addButtonInline} onPress={handleAddNewPark}>
               <Ionicons name="add" size={24} color="#FFFFFF" />
             </TouchableOpacity>
-          )}
-          <TouchableOpacity onPress={() => setIsProfileMenuVisible(true)} style={{ marginLeft: 15 }}>
-            <Image 
-              source={{ uri: 'https://ui-avatars.com/api/?name=Admin&background=03045E&color=fff&size=128' }} 
-              style={styles.profileImage} 
-            />
-          </TouchableOpacity>
-        </View>
-      </View>
+          )
+        }
+      />
 
       <View style={styles.tabSwitcherContainer}>
         <TouchableOpacity style={[styles.tabButton, activeTab === 'records' && styles.tabButtonActive]} onPress={() => setActiveTab('records')}>
@@ -564,18 +598,6 @@ export default function TicketManageScreen() {
           </View>
         )}
       </ScrollView>
-
-      <Modal transparent={true} visible={isProfileMenuVisible} animationType="fade">
-        <TouchableWithoutFeedback onPress={() => setIsProfileMenuVisible(false)}>
-          <View style={styles.menuModalOverlay}>
-            <View style={styles.dropdownMenu}>
-              <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
-                <Ionicons name="log-out-outline" size={20} color="#ef4444" /><Text style={styles.menuText}>Log Keluar</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </TouchableWithoutFeedback>
-      </Modal>
 
       {/* ================= ADD PARK MODAL ================= */}
       <Modal visible={modalVisible} animationType="slide">
@@ -741,11 +763,11 @@ export default function TicketManageScreen() {
           <Ionicons name="people-outline" size={24} color="#90A4AE" />
           <Text style={styles.tabText}>Pengguna</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.tabItem} onPress={() => handleDummyPress('Kewangan')}>
+        <TouchableOpacity style={styles.tabItem} onPress={() => router.replace('/adminfinance')}>
           <Ionicons name="stats-chart-outline" size={24} color="#90A4AE" />
           <Text style={styles.tabText}>Kewangan</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.tabItem} onPress={() => handleDummyPress('Notifikasi')}>
+        <TouchableOpacity style={styles.tabItem} onPress={() => router.replace('/adminnotification')}>
           <Ionicons name="notifications-outline" size={24} color="#90A4AE" />
           <Text style={styles.tabText}>Notifikasi</Text>
         </TouchableOpacity>
@@ -797,11 +819,51 @@ export default function TicketManageScreen() {
                   <View style={styles.infoRow}><Text style={styles.infoLabel}>Tarikh Masuk:</Text><Text style={styles.infoValue}>{selectedTicketDetail.bookingDate}</Text></View>
                   
                   <View style={styles.ticketCountsBox}>
-                    <Text style={styles.ticketCountsTitle}>Jenis Pelawat (Kuantiti):</Text>
-                    {selectedTicketDetail.counts.adult > 0 && <Text style={styles.ticketCountItem}>• Dewasa x {selectedTicketDetail.counts.adult}</Text>}
-                    {selectedTicketDetail.counts.child > 0 && <Text style={styles.ticketCountItem}>• Kanak-kanak x {selectedTicketDetail.counts.child}</Text>}
-                    {selectedTicketDetail.counts.senior > 0 && <Text style={styles.ticketCountItem}>• Warga Emas x {selectedTicketDetail.counts.senior}</Text>}
-                    {selectedTicketDetail.counts.oku > 0 && <Text style={styles.ticketCountItem}>• OKU x {selectedTicketDetail.counts.oku}</Text>}
+                    <Text style={styles.ticketCountsTitle}>Perincian Tiket & Harga:</Text>
+                    
+                    {selectedTicketDetail.counts?.adult > 0 && (
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                        <Text style={styles.ticketCountItem}>
+                          • Dewasa <Text style={{fontSize: 11, color: '#94A3B8'}}>({selectedTicketDetail.counts.adult} x RM {parseFloat(selectedTicketDetail.prices?.adult || 0).toFixed(2)})</Text>
+                        </Text>
+                        <Text style={{ fontSize: 13, color: '#334155', fontWeight: 'bold' }}>
+                          RM {(selectedTicketDetail.counts.adult * parseFloat(selectedTicketDetail.prices?.adult || 0)).toFixed(2)}
+                        </Text>
+                      </View>
+                    )}
+
+                    {selectedTicketDetail.counts?.child > 0 && (
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                        <Text style={styles.ticketCountItem}>
+                          • Kanak-kanak <Text style={{fontSize: 11, color: '#94A3B8'}}>({selectedTicketDetail.counts.child} x RM {parseFloat(selectedTicketDetail.prices?.child || 0).toFixed(2)})</Text>
+                        </Text>
+                        <Text style={{ fontSize: 13, color: '#334155', fontWeight: 'bold' }}>
+                          RM {(selectedTicketDetail.counts.child * parseFloat(selectedTicketDetail.prices?.child || 0)).toFixed(2)}
+                        </Text>
+                      </View>
+                    )}
+
+                    {selectedTicketDetail.counts?.senior > 0 && (
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                        <Text style={styles.ticketCountItem}>
+                          • Warga Emas <Text style={{fontSize: 11, color: '#94A3B8'}}>({selectedTicketDetail.counts.senior} x RM {parseFloat(selectedTicketDetail.prices?.senior || 0).toFixed(2)})</Text>
+                        </Text>
+                        <Text style={{ fontSize: 13, color: '#334155', fontWeight: 'bold' }}>
+                          RM {(selectedTicketDetail.counts.senior * parseFloat(selectedTicketDetail.prices?.senior || 0)).toFixed(2)}
+                        </Text>
+                      </View>
+                    )}
+
+                    {selectedTicketDetail.counts?.oku > 0 && (
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                        <Text style={styles.ticketCountItem}>
+                          • OKU <Text style={{fontSize: 11, color: '#94A3B8'}}>({selectedTicketDetail.counts.oku} x RM {parseFloat(selectedTicketDetail.prices?.oku || 0).toFixed(2)})</Text>
+                        </Text>
+                        <Text style={{ fontSize: 13, color: '#334155', fontWeight: 'bold' }}>
+                          RM {(selectedTicketDetail.counts.oku * parseFloat(selectedTicketDetail.prices?.oku || 0)).toFixed(2)}
+                        </Text>
+                      </View>
+                    )}
                   </View>
                   
                   <View style={[styles.infoRow, { marginTop: 15, borderTopWidth: 1, borderTopColor: '#E2E8F0', paddingTop: 10 }]}>

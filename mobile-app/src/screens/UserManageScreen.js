@@ -9,7 +9,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../../firebaseConfig'; 
-import { logoutUser } from '../services/AuthService';
+import AdminHeader from '../components/AdminHeader';
 
 export default function UserManageScreen() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -20,19 +20,6 @@ export default function UserManageScreen() {
   const [filterStatus, setFilterStatus] = useState('Semua');
   const [filterNationality, setFilterNationality] = useState('Semua');
   const [filterDateRange, setFilterDateRange] = useState('Semua'); 
-
-  const [isProfileMenuVisible, setIsProfileMenuVisible] = useState(false);
-
-  const handleLogout = async () => {
-    try {
-      setIsProfileMenuVisible(false);
-      await logoutUser();
-      Alert.alert("Berjaya", "Anda telah log keluar.");
-      router.replace('/login');
-    } catch (error) {
-      Alert.alert("Ralat", error.message);
-    }
-  };
 
   useFocusEffect(
     useCallback(() => {
@@ -151,19 +138,7 @@ export default function UserManageScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.headerTitle}>Akaun Pelanggan</Text>
-          <Text style={styles.headerSubtitle}>Urus pengguna sistem</Text>
-        </View>
-        
-        <TouchableOpacity onPress={() => setIsProfileMenuVisible(true)}>
-          <Image 
-            source={{ uri: 'https://ui-avatars.com/api/?name=Admin&background=03045E&color=fff&size=128' }} 
-            style={styles.profileImage} 
-          />
-        </TouchableOpacity>
-      </View>
+      <AdminHeader title="Akaun Pelanggan" subtitle="Urus pengguna sistem" />
 
       <View style={styles.searchSection}>
         <View style={styles.searchBar}>
@@ -207,21 +182,6 @@ export default function UserManageScreen() {
           />
         )}
       </View>
-
-      <Modal transparent={true} visible={isProfileMenuVisible} animationType="fade">
-        <TouchableWithoutFeedback onPress={() => setIsProfileMenuVisible(false)}>
-          <View style={styles.menuModalOverlay}>
-            <TouchableWithoutFeedback>
-              <View style={styles.dropdownMenu}>
-                <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
-                  <Ionicons name="log-out-outline" size={20} color="#ef4444" />
-                  <Text style={[styles.menuText, { color: '#ef4444' }]}>Log Keluar</Text>
-                </TouchableOpacity>
-              </View>
-            </TouchableWithoutFeedback>
-          </View>
-        </TouchableWithoutFeedback>
-      </Modal>
 
       <Modal animationType="slide" transparent={true} visible={isFilterVisible}>
         <View style={styles.modalOverlay}>
@@ -285,8 +245,14 @@ export default function UserManageScreen() {
           <Text style={styles.tabText}>Tiket</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.tabItem}><Ionicons name="people" size={24} color="#0077B6" /><Text style={[styles.tabText, styles.tabTextActive]}>Pengguna</Text></TouchableOpacity>
-        <TouchableOpacity style={styles.tabItem}><Ionicons name="stats-chart-outline" size={24} color="#90A4AE" /><Text style={styles.tabText}>Kewangan</Text></TouchableOpacity>
-        <TouchableOpacity style={styles.tabItem}><Ionicons name="notifications-outline" size={24} color="#90A4AE" /><Text style={styles.tabText}>Notifikasi</Text></TouchableOpacity>
+        <TouchableOpacity style={styles.tabItem} onPress={() => router.replace('/adminfinance')}>
+          <Ionicons name="stats-chart-outline" size={24} color="#90A4AE" />
+          <Text style={styles.tabText}>Kewangan</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.tabItem} onPress={() => router.replace('/adminnotification')}>
+          <Ionicons name="notifications-outline" size={24} color="#90A4AE" />
+          <Text style={styles.tabText}>Notifikasi</Text>
+        </TouchableOpacity>
         <TouchableOpacity style={styles.tabItem} onPress={() => router.replace('/adminsystem')}>
           <Ionicons name="settings-outline" size={24} color="#90A4AE" />
           <Text style={styles.tabText}>Sistem</Text>

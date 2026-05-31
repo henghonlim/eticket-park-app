@@ -21,6 +21,40 @@ export default function PaymentScreen() {
   const auth = getAuth();
 
   const { parkId, parkName, date, total, adult, child, senior, oku } = params;
+
+  const generateNotifSummary = () => {
+    if (!parkData || !parkData.pricing) return "";
+    
+    const p = parkData.pricing;
+    const isMsia = (
+      parseInt(adult || 0) * parseFloat(p.msia?.adult || 0) +
+      parseInt(child || 0) * parseFloat(p.msia?.child || 0) +
+      parseInt(senior || 0) * parseFloat(p.msia?.senior || 0) +
+      parseInt(oku || 0) * parseFloat(p.msia?.oku || 0)
+    ) === parseFloat(total);
+
+    const prices = isMsia ? p.msia : p.intl;
+
+    let summary = "";
+    if (adult && parseInt(adult) > 0) {
+      const sub = (parseInt(adult) * parseFloat(prices?.adult || 0)).toFixed(2);
+      summary += `\n• ${adult}x Dewasa : RM ${sub}`;
+    }
+    if (child && parseInt(child) > 0) {
+      const sub = (parseInt(child) * parseFloat(prices?.child || 0)).toFixed(2);
+      summary += `\n• ${child}x Kanak-kanak : RM ${sub}`;
+    }
+    if (senior && parseInt(senior) > 0) {
+      const sub = (parseInt(senior) * parseFloat(prices?.senior || 0)).toFixed(2);
+      summary += `\n• ${senior}x Warga Emas : RM ${sub}`;
+    }
+    if (oku && parseInt(oku) > 0) {
+      const sub = (parseInt(oku) * parseFloat(prices?.oku || 0)).toFixed(2);
+      summary += `\n• ${oku}x OKU : RM ${sub}`;
+    }
+    
+    return summary;
+  };
   
   const [isProcessing, setIsProcessing] = useState(false);
   const [parkQrUrl, setParkQrUrl] = useState(null);
@@ -30,13 +64,18 @@ export default function PaymentScreen() {
   const [receiptBase64, setReceiptBase64] = useState(null);
   const [fileDetails, setFileDetails] = useState(null); 
   const [showPreview, setShowPreview] = useState(false); 
+  const [parkData, setParkData] = useState(null);
 
   useEffect(() => {
     const fetchParkQr = async () => {
       try {
         const parkDoc = await getDoc(doc(db, "parks", parkId));
-        if (parkDoc.exists() && parkDoc.data().qrCodeUrl) {
-          setParkQrUrl(parkDoc.data().qrCodeUrl);
+        if (parkDoc.exists()) {
+          const data = parkDoc.data();
+          setParkData(data);
+          if (data.qrCodeUrl) {
+            setParkQrUrl(data.qrCodeUrl);
+          }
         }
       } catch (error) { console.error(error); } finally { setLoadingQr(false); }
     };
@@ -141,15 +180,32 @@ export default function PaymentScreen() {
         timestamp: serverTimestamp(),
       };
 
+      const p = parkData?.pricing;
+      const isMsia = p ? (
+        parseInt(adult || 0) * parseFloat(p.msia?.adult || 0) +
+        parseInt(child || 0) * parseFloat(p.msia?.child || 0) +
+        parseInt(senior || 0) * parseFloat(p.msia?.senior || 0) +
+        parseInt(oku || 0) * parseFloat(p.msia?.oku || 0)
+      ) === parseFloat(total) : true;
+      const prices = isMsia ? p?.msia : p?.intl;
+
       const ticketData = {
         userId,
         parkId,
         parkName,
         bookingDate: date,
+        ticketCategory: isMsia ? "Warganegara" : "Bukan Warganegara",
         counts: { adult, child, senior, oku },
+        prices: {
+          adult: parseFloat(prices?.adult || 0),
+          child: parseFloat(prices?.child || 0),
+          senior: parseFloat(prices?.senior || 0),
+          oku: parseFloat(prices?.oku || 0),
+        },
         status: "Menunggu Pengesahan", 
         receiptUrl: base64Data,
         transactionId: newTransactionRef.id,
+        totalAmount: parseFloat(total),
         createdAt: serverTimestamp(),
       };
 
@@ -163,13 +219,23 @@ export default function PaymentScreen() {
         const userDoc = await getDoc(doc(db, "users", userId));
         const realName = userDoc.exists() ? (userDoc.data().fullName || "Pengguna") : "Pengguna";
         
-        let notifTitle = "Pembayaran Dihantar";
-        let notifBody = `Resit pembayaran anda untuk ${parkName} telah diterima.`;
+        const ticketSummary = generateNotifSummary();
+        
+        const detailedBody = `Hai ${realName}, resit pembayaran untuk tempahan ke ${parkName} telah diterima. \n\nPerincian Tiket:${ticketSummary}\n\nJumlah Keseluruhan : RM ${parseFloat(total).toFixed(2)}\n\nAdmin akan menyemak resit anda segera.`;
+
+        let notifTitle = "Pembayaran Sedang Disemak";
+        let notifBody = detailedBody; 
 
         if (settingsSnap.exists() && settingsSnap.data().templates?.pending) {
           const template = settingsSnap.data().templates.pending;
           if (template.title) notifTitle = template.title.replace(/\[Nama\]/g, realName).replace(/\[Taman\]/g, parkName);
-          if (template.body) notifBody = template.body.replace(/\[Nama\]/g, realName).replace(/\[Taman\]/g, parkName);
+          
+          if (template.body) {
+            notifBody = template.body
+              .replace(/\[Nama\]/g, realName)
+              .replace(/\[Taman\]/g, parkName)
+              .replace(/\[Perincian\]/g, `\n\nPerincian Tiket:${ticketSummary}\n\nJumlah Keseluruhan : RM ${parseFloat(total).toFixed(2)}\n`);
+          }
         }
 
         const newNotifRef = doc(collection(db, "notifications"));

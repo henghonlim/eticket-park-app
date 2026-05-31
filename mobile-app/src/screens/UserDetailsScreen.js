@@ -6,7 +6,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { adminUpdateUser } from '../services/AuthService';
-import { doc, getDoc } from 'firebase/firestore'; 
+import { doc, getDoc, collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
 import { db } from '../../firebaseConfig';
 
 export default function UserDetailsScreen() {
@@ -75,6 +76,20 @@ export default function UserDetailsScreen() {
             setIsUpdating(true);
             try {
               await adminUpdateUser(userData.id, { accountStatus: newStatus });
+
+              try {
+                const auth = getAuth();
+                const adminEmail = auth.currentUser?.email || 'Admin';
+                const actionTeksLog = newStatus === 'Digantung' ? 'MENGGANTUNG' : 'MENGAKTIFKAN SEMULA';
+                
+                await addDoc(collection(db, "auditLogs"), {
+                    action: "Kawalan Akaun Pengguna",
+                    details: `Admin (${adminEmail}) telah ${actionTeksLog} akaun pengguna: @${userData.userName} (ID: ${userData.id}).`,
+                    timestamp: serverTimestamp()
+                  });
+              } catch (logError) {
+                  console.log("Gagal merekod log kawalan akaun:", logError);
+              }
               
               setUserData(prev => ({ ...prev, accountStatus: newStatus }));
               
