@@ -17,6 +17,8 @@ export default function MaintenanceOverlay() {
       if (docSnap.exists()) {
         setIsMaintenance(docSnap.data().maintenanceMode === true);
       }
+    }, (error) => {
+      console.log("Berhenti mendengar status penyelenggaraan (maintenance) kerana log keluar.", error.message);
     });
     return () => unsubscribeDB();
   }, []);

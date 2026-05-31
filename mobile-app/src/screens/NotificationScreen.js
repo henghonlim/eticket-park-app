@@ -34,6 +34,8 @@ export default function NotificationScreen() {
           const notifData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
           setNotifications(notifData);
           setLoading(false);
+        }, (error) => {
+          console.log("Berhenti mendengar notifikasi kerana user log keluar.", error.message);
         });
       }
     });

@@ -77,7 +77,11 @@ export default function PaymentScreen() {
             setParkQrUrl(data.qrCodeUrl);
           }
         }
-      } catch (error) { console.error(error); } finally { setLoadingQr(false); }
+      } catch (error) { 
+        console.log("Gagal memuat QR Code (sesi mungkin tamat):", error.message); 
+      } finally { 
+        setLoadingQr(false); 
+      }
     };
     if (parkId) fetchParkQr();
   }, [parkId]);
@@ -115,7 +119,7 @@ export default function PaymentScreen() {
         }
       }
     } catch (error) {
-      console.error("Save Error:", error);
+      console.log("Save Error:", error.message);
       Alert.alert("Ralat", "Gagal memproses QR Code.");
     }
   };

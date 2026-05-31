@@ -78,7 +78,7 @@ export default function UserMapScreen() {
         }
 
       } catch (error) {
-        console.error("Error fetching map data:", error);
+        console.error("Error fetching map data:", error.message);
       } finally {
         setLoading(false);
       }

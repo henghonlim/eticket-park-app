@@ -106,7 +106,7 @@ export default function AdminDashboard() {
       });
 
     } catch (error) {
-      console.error("Gagal memuat data dashboard:", error);
+      console.log("Gagal memuat data dashboard (sesi mungkin tamat):", error.message);
     } finally {
       setLoading(false);
     }

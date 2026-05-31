@@ -107,6 +107,8 @@ export default function TicketManageScreen() {
 
         setAllTickets(enrichedTickets);
         setLoading(false);
+      }, (error) => {
+        console.log("Berhenti mendengar rekod tiket kerana admin log keluar.", error.message);
       });
     }
     return () => unsubscribe && unsubscribe();

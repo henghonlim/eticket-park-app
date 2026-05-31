@@ -43,7 +43,7 @@ export default function AdminClosureTab({ parks }) {
         setAnnounceTitle(defaultTitle.replace(/\[Taman\]/g, selectedPark.name));
         setAnnounceBody(defaultBody.replace(/\[Taman\]/g, selectedPark.name));
       } catch (err) {
-        console.error("Gagal memuatkan templat closure:", err);
+        console.log("Gagal memuatkan templat closure:", err.message);
       } finally {
         setLoading(false);
       }

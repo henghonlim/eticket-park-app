@@ -86,7 +86,7 @@ export default function AdminSystemScreen() {
         setTemplates(data.templates || templates);
       }
     } catch (error) {
-      console.error("Fetch settings error:", error);
+      console.log("Fetch settings error:", error);
     } finally {
       setLoading(false);
     }
@@ -110,7 +110,6 @@ export default function AdminSystemScreen() {
       const logList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setLogs(logList);
     }, (error) => {
-      // 🌟 拦截注销时的权限报错，防止红屏
       console.log("Berhenti mendengar log kerana admin telah log keluar.");
     });
   };
@@ -293,7 +292,9 @@ export default function AdminSystemScreen() {
                     });
 
                   } catch (error) {
-                    console.error("Gagal simpan status", error);
+                    console.log("Gagal simpan status:", error.message);
+                    setMaintenanceMode(!val);
+                    Alert.alert("Ralat", "Gagal mengemaskini tetapan sistem.");
                   }
                 }}
                 trackColor={{ false: "#CBD5E1", true: "#00B4D8" }}

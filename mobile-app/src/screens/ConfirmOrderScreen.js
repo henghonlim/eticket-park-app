@@ -38,7 +38,7 @@ export default function ConfirmOrderScreen() {
           }
         }
       } catch (error) {
-        console.error("Gagal mendapatkan harga:", error);
+        console.log("Gagal mendapatkan harga:", error.message);
       }
     };
     fetchPrices();

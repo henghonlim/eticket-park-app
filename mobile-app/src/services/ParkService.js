@@ -35,7 +35,7 @@ export const addPark = async (parkData) => {
         });
         return docRef.id;
     } catch (error) {
-        console.error("Add Park Error:", error);
+        console.log("Add Park Error:", error.message);
         throw error;
     }
 };
@@ -46,7 +46,7 @@ export const getAllParks = async () => {
         const snapshot = await getDocs(q);
         return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     } catch (error) {
-        console.error("Get Parks Error:", error);
+        console.log("Get Parks Error:", error.message);
         throw error;
     }
 };
@@ -60,7 +60,7 @@ export const getParkById = async (parkId) => {
         }
         return null;
     } catch (error) {
-        console.error("Get Park By ID Error:", error);
+        console.log("Get Park By ID Error:", error.message);
         throw error;
     }
 };
@@ -74,7 +74,7 @@ export const updatePark = async (parkId, updatedData) => {
         });
         return true;
     } catch (error) {
-        console.error("Update Park Error:", error);
+        console.log("Update Park Error:", error.message);
         throw error;
     }
 };
@@ -85,7 +85,7 @@ export const deletePark = async (parkId) => {
         await deleteDoc(parkRef);
         return true;
     } catch (error) {
-        console.error("Delete Park Error:", error);
+        console.log("Delete Park Error:", error.message);
         throw error;
     }
 };

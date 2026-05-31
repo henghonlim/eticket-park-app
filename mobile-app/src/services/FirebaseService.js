@@ -18,7 +18,7 @@ export const getTickets = async () => {
             ...doc.data()
         }));
     } catch (error) {
-        console.error("Error fetching tickets:", error);
+        console.log("Error fetching tickets:", error.message);
         return [];
     }
 };

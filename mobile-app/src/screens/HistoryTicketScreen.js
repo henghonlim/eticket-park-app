@@ -60,6 +60,8 @@ export default function HistoryTicketsScreen() {
 
       setHistoryTickets(filtered);
       setLoading(false);
+    }, (error) => {
+      console.log("Pemantauan HistoryTicket dihentikan secara automatik kerana user log keluar.");
     });
 
     return () => unsubscribe();

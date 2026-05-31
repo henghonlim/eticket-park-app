@@ -107,7 +107,7 @@ export default function BuyTicketScreen() {
       }
     } catch (error) {
       Alert.alert("Ralat", "Gagal mengemaskini kegemaran.");
-      console.error("Favorite Error:", error);
+      console.log("Favorite Error:", error.message);
     }
   };
 

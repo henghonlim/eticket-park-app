@@ -121,7 +121,7 @@ export const getCurrentUserData = async () => {
         }
         return null;
     } catch (error) {
-        console.error("Error fetching user data:", error);
+        console.log("Error fetching user data:", error.message);
         throw error;
     }
 };

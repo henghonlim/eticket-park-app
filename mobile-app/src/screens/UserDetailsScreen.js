@@ -52,7 +52,7 @@ export default function UserDetailsScreen() {
         });
         setIsLoading(false);
       } catch (error) {
-        console.error("Gagal memuat turun data terkini:", error);
+        console.log("Gagal memuat turun data terkini (sesi mungkin tamat):", error.message);
         setIsLoading(false);
       }
     };
@@ -95,7 +95,11 @@ export default function UserDetailsScreen() {
               
               Alert.alert("Berjaya", `Akaun telah berjaya ${newStatus.toLowerCase()}.`);
             } catch (error) {
-              Alert.alert("Ralat", "Gagal mengemaskini status akaun.");
+              if (error.code === 'permission-denied') {
+                console.log("Admin telah log keluar, operasi dibatalkan.");
+              } else {
+                Alert.alert("Ralat", "Gagal mengemaskini status akaun. Sila cuba lagi.");
+              }
             } finally {
               setIsUpdating(false);
             }

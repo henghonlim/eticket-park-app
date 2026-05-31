@@ -38,7 +38,7 @@ export default function FavoriteScreen() {
       }));
       setFavorites(favList);
     } catch (error) {
-      console.error("Error fetching favorites:", error);
+      console.log("Error fetching favorites:", error.message);
     } finally {
       setLoading(false);
     }

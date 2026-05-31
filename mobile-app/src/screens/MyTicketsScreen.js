@@ -75,8 +75,8 @@ export default function MyTicketsScreen() {
       setLoading(false);
       setRefreshing(false);
       
-    }, () => {
-      console.log("Sambungan Firestore ditutup (normal semasa log keluar).");
+    }, (error) => {
+      console.log("Sambungan Firestore ditutup (normal semasa log keluar).", error.message);
     });
 
     return () => unsubscribe();

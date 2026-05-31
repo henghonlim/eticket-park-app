@@ -32,8 +32,7 @@ export default function UserManageScreen() {
           });
           setAllUsers(usersList);
         } catch (error) {
-          console.log("Ralat mengambil data:", error);
-          alert("Gagal memuat turun senarai pengguna.");
+          console.log("Ralat mengambil data (biasa jika sesi tamat):", error.message);
         } finally {
           setIsLoading(false);
         }

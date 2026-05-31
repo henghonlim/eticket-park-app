@@ -39,7 +39,7 @@ export default function UserMainPage() {
       const data = await getAllParks();
       setParks(data.filter(p => p.status === 'Aktif'));
     } catch (error) {
-      console.error("Fetch error:", error);
+      console.log("Fetch error:", error.message);
     }
   };
 

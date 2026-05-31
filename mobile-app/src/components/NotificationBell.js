@@ -22,6 +22,8 @@ export default function NotificationBell() {
       );
       unsubscribeNotif = onSnapshot(qNotif, (snap) => {
         setHasUnreadNotif(!snap.empty);
+      }, (error) => {
+        console.log("Berhenti mendengar status notifikasi (badge) kerana log keluar.", error.message);
       });
     }
 

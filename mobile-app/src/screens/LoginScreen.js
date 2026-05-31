@@ -15,7 +15,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { loginUser, resetUserPassword, logoutUser } from '../services/AuthService';
 import { db } from '../../firebaseConfig';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const MARINE_LOGO = require('../../assets/marinepark-logo.png');
 
@@ -34,6 +35,7 @@ export default function LoginScreen() {
     setIsLoading(true);
 
     try {
+      await AsyncStorage.setItem('localSessionId', 'LOGGING_IN');
       const { user, role, accountStatus } = await loginUser(email, password);
       
       if (accountStatus === 'Digantung') {
@@ -43,6 +45,19 @@ export default function LoginScreen() {
         setPassword('');
         return; 
       }
+
+      // 1. Jana Session ID unik
+      const newSessionId = `SESSION_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+      
+      // 2. Simpan di memori peranti ini
+      await AsyncStorage.setItem('localSessionId', newSessionId);
+      
+      // 3. Kemaskini di Firestore
+      const userRef = doc(db, 'users', user.uid);
+      await updateDoc(userRef, {
+        currentSessionId: newSessionId
+      });
+
       if (role === 'admin') {
 
         try {
@@ -54,7 +69,7 @@ export default function LoginScreen() {
         } catch (logError) {
           console.log("Gagal merekod log aktiviti:", logError);
         }
-        
+
         alert("Selamat Datang, Admin!");
         router.replace('/admindashboard'); 
       } else {
@@ -63,6 +78,7 @@ export default function LoginScreen() {
       }
 
     } catch (error) {
+      await AsyncStorage.removeItem('localSessionId');
       console.log("Log Masuk Gagal:", error.message);
       alert("Gagal Log Masuk: E-mel atau kata laluan salah.");
       
