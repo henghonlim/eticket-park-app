@@ -17,7 +17,6 @@ import AdminHeader from '../components/AdminHeader';
 const MONTH_NAMES = ['Januari', 'Februari', 'Mac', 'April', 'Mei', 'Jun', 'Julai', 'Ogos', 'September', 'Oktober', 'November', 'Disember'];
 const SHORT_DAY_NAMES = ['Ahd', 'Isn', 'Sel', 'Rab', 'Kha', 'Jum', 'Sab'];
 
-// 🌟 生成年份列表 (前后10年)
 const currentYear = new Date().getFullYear();
 const YEARS_LIST = Array.from({length: 21}, (_, i) => currentYear - 10 + i); 
 
@@ -25,7 +24,6 @@ export default function AdminSystemScreen() {
   const [activeTab, setActiveTab] = useState('templates'); 
   const [loading, setLoading] = useState(false);
   
-  // --- Templat Dropdown ---
   const [isDropdownVisible, setIsDropdownVisible] = useState(false);
   const [selectedTemplateType, setSelectedTemplateType] = useState('pending');
 
@@ -36,7 +34,6 @@ export default function AdminSystemScreen() {
     { id: 'weather', label: 'Amaran Cuaca', icon: 'thunderstorm', color: '#F59E0B' }
   ];
 
-  // --- Data States ---
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [logs, setLogs] = useState([]);
   const [templates, setTemplates] = useState({
@@ -46,7 +43,6 @@ export default function AdminSystemScreen() {
     weather: { title: '', body: '' }
   });
 
-  // --- 🌟 Calendar & Log Filter States ---
   const [selectedDate, setSelectedDate] = useState(new Date()); 
   const [calendarMonth, setCalendarMonth] = useState(new Date()); 
   const [isYearPickerVisible, setIsYearPickerVisible] = useState(false);
@@ -280,11 +276,9 @@ export default function AdminSystemScreen() {
                 onValueChange={async (val) => {
                   setMaintenanceMode(val);
                   try {
-                    // 1. Simpan ke tetapan
                     const docRef = doc(db, "system", "settings");
                     await setDoc(docRef, { maintenanceMode: val }, { merge: true });
                     
-                    // 🌟 2. FIX: Tulis ke Log Aktiviti secara langsung di sini!
                     await addDoc(collection(db, "auditLogs"), {
                       action: "Kawalan Sistem",
                       details: `Admin telah ${val ? 'MENGAKTIFKAN' : 'MEMATIKAN'} Mod Penyelenggaraan.`,
@@ -371,7 +365,6 @@ export default function AdminSystemScreen() {
         <View style={{ height: 120 }} />
       </ScrollView>
 
-      {/* ================= 🌟 FIX: 年份选择器弹窗 (修复滑动回弹问题) ================= */}
       <Modal visible={isYearPickerVisible} transparent={true} animationType="fade">
         <TouchableOpacity 
           style={styles.modalOverlayPicker} 
@@ -381,10 +374,9 @@ export default function AdminSystemScreen() {
           <TouchableOpacity activeOpacity={1} style={styles.yearPickerDropdown}>
             <Text style={styles.pickerTitle}>Pilih Tahun</Text>
             
-            {/* 🌟 这里是重点：确保 ScrollView 能撑开 */}
             <ScrollView 
-              style={{ flexGrow: 0, maxHeight: 400 }} // 稍微调高一点 maxHeight
-              contentContainerStyle={{ paddingBottom: 20 }} // 给底部留出呼吸空间
+              style={{ flexGrow: 0, maxHeight: 400 }}
+              contentContainerStyle={{ paddingBottom: 20 }}
               showsVerticalScrollIndicator={true}
             >
               <View style={styles.yearGrid}>
@@ -410,7 +402,6 @@ export default function AdminSystemScreen() {
         </TouchableOpacity>
       </Modal>
 
-      {/* 🌟 FIX: Template Type Dropdown Modal (同步修复) */}
       <Modal visible={isDropdownVisible} transparent={true} animationType="fade">
         <TouchableWithoutFeedback onPress={() => setIsDropdownVisible(false)}>
           <View style={styles.modalOverlayPicker}>

@@ -10,7 +10,8 @@ import { doc, onSnapshot } from 'firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { db } from '../firebaseConfig';
 import { logoutUser } from '../src/services/AuthService';
-
+import '../src/i18n';
+import { useTranslation } from 'react-i18next';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export const unstable_settings = {
@@ -19,6 +20,7 @@ export const unstable_settings = {
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+  const { t } = useTranslation();
 
   useEffect(() => {
     const auth = getAuth();
@@ -38,10 +40,8 @@ export default function RootLayout() {
               return; 
             }
             
-            // 🚨 TENDANG KELUAR: Jika Session ID tidak sepadan
             if (cloudData.currentSessionId && cloudData.currentSessionId !== localSessionId) {
                
-               // Tutup pemantauan sebelum log keluar untuk elak ralat permission-denied
                if (unsubscribeSnapshot) {
                  unsubscribeSnapshot(); 
                }
@@ -50,17 +50,16 @@ export default function RootLayout() {
                await logoutUser();
                
                Alert.alert(
-                 "Amaran Keselamatan ⚠️", 
-                 "Akaun anda telah log masuk di peranti lain. Sesi ini telah ditamatkan secara automatik.",
-                 [{ text: "Faham", onPress: () => router.replace('/login') }] 
-               );
+                t('securityWarning.title'), 
+                t('securityWarning.message'),
+                [{ text: t('securityWarning.button'), onPress: () => router.replace('/login') }] 
+              );
             }
           }
         }, (error) => {
           console.log("Pemantauan sesi dihentikan:", error.message);
         });
       } else {
-        // Pengguna log keluar secara manual
         if (unsubscribeSnapshot) {
           unsubscribeSnapshot();
         }
@@ -71,7 +70,7 @@ export default function RootLayout() {
       if (unsubscribeSnapshot) unsubscribeSnapshot();
       unsubscribeAuth();
     };
-  }, []);
+  }, [t]);
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>

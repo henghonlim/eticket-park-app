@@ -11,7 +11,7 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import AdminHeader from '../components/AdminHeader';
 import { db } from '../../firebaseConfig';
 import { collection, doc, getDoc, getDocs, updateDoc, addDoc, serverTimestamp } from 'firebase/firestore';
-import { PieChart } from 'react-native-gifted-charts'; // 引入简单的圆环图
+import { PieChart } from 'react-native-gifted-charts';
 
 export default function AdminDashboard() {
   const [isScannerVisible, setIsScannerVisible] = useState(false);
@@ -19,17 +19,15 @@ export default function AdminDashboard() {
   const [permission, requestPermission] = useCameraPermissions();
   const isProcessing = useRef(false);
 
-  // 🌟 新增：Dashboard 的真实数据 State
   const [loading, setLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState({
     totalRevenue: 0,
     totalTickets: 0,
     totalVisitors: 0,
-    pendingTickets: 0, // 等待验证的票数
-    parkDistribution: [] // 公园人流分布
+    pendingTickets: 0,
+    parkDistribution: []
   });
 
-  // 🌟 新增：拉取数据库的真实简要数据
   useEffect(() => {
     fetchDashboardData();
   }, []);
@@ -44,12 +42,10 @@ export default function AdminDashboard() {
       tkSnap.forEach(doc => {
         const data = doc.data();
         
-        // 计算等待验证的票
         if (data.status === "Menunggu Pengesahan") {
           pending += 1;
         }
 
-        // 计算已成功的 KPI
         if (data.status === "Sah" || data.status === "Telah Digunakan") {
           rev += parseFloat(data.totalAmount || 0);
           
@@ -57,20 +53,17 @@ export default function AdminDashboard() {
           const sumPax = Number(c.adult||0) + Number(c.child||0) + Number(c.senior||0) + Number(c.oku||0);
           
           pax += sumPax;
-          tkt += sumPax; // 根据你的逻辑，多少人就是多少张票
+          tkt += sumPax;
 
-          // 记录公园人流量分布
           const pName = data.parkName || "Lain-lain";
           parkCounts[pName] = (parkCounts[pName] || 0) + sumPax;
         }
       });
 
-      // 格式化给 PieChart 用的数据
       const sortedParks = Object.keys(parkCounts)
         .map(park => ({ name: park.split(' ').pop(), count: parkCounts[park] })) // 只取名字最后一个词，比如 Pulau Tioman 变成 Tioman
         .sort((a, b) => b.count - a.count);
 
-      // 2. 截取前 4 名，并把剩下的加起来
       let finalPieData = [];
       let othersCount = 0;
 
@@ -82,12 +75,10 @@ export default function AdminDashboard() {
         }
       });
 
-      // 如果有第 5 名以后的，就加一个 "Lain-lain"
       if (othersCount > 0) {
         finalPieData.push({ name: 'Lain-lain', count: othersCount });
       }
 
-      // 3. 赋予颜色 (专门为 Top 4 + Lain-lain 设计的高级配色)
       const colors = ['#03045E', '#0077B6', '#00B4D8', '#90E0EF', '#CBD5E1']; // 最后一个灰色留给 Lain-lain
       
       const pieData = finalPieData.map((item, idx) => ({
@@ -128,7 +119,6 @@ export default function AdminDashboard() {
 
   const handleBarCodeScanned = async ({ type, data }) => {
     if (isProcessing.current) return;
-    
     isProcessing.current = true;
     setScanned(true);
 
@@ -222,7 +212,6 @@ export default function AdminDashboard() {
   return (
     <SafeAreaView style={styles.container}>
       
-      {/* ================= 1. Header (保留不变) ================= */}
       <AdminHeader 
         title="Papan Pemuka Admin"
         subtitle="Admin Taman Laut"
@@ -233,10 +222,8 @@ export default function AdminDashboard() {
         }
       />
 
-      {/* ================= 2. Scroll Content (Dashboard 重构版) ================= */}
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         
-        {/* 欢迎语与日期 */}
         <View style={styles.welcomeSection}>
           <Text style={styles.welcomeText}>Selamat Bertugas!</Text>
           <Text style={styles.dateText}>{new Date().toLocaleDateString('ms-MY', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</Text>
@@ -246,7 +233,6 @@ export default function AdminDashboard() {
           <ActivityIndicator size="large" color="#0077B6" style={{ marginTop: 50 }} />
         ) : (
           <>
-            {/* 🌟 行动提示横幅 (Action Alert) - Dashboard 最重要的元素 */}
             <TouchableOpacity 
               style={[styles.alertBanner, dashboardData.pendingTickets > 0 ? styles.alertBannerWarning : styles.alertBannerSafe]}
               onPress={() => router.push({ pathname: '/ticketmanage', params: { tab: 'records' } })}
@@ -271,7 +257,6 @@ export default function AdminDashboard() {
               <Ionicons name="chevron-forward" size={20} color={dashboardData.pendingTickets > 0 ? "#D97706" : "#059669"} />
             </TouchableOpacity>
 
-            {/* 🌟 大盘数据 (The Big 3 KPIs) */}
             <Text style={styles.sectionTitle}>Ringkasan Keseluruhan</Text>
             
             <View style={styles.kpiMainCard}>
@@ -300,7 +285,6 @@ export default function AdminDashboard() {
               </View>
             </View>
 
-            {/* 🌟 极简圆环图 (看分布) */}
             <View style={styles.chartCard}>
               <Text style={styles.chartTitle}>Taburan Pelawat Semasa</Text>
               {dashboardData.parkDistribution.length > 0 ? (
@@ -334,7 +318,6 @@ export default function AdminDashboard() {
         )}
       </ScrollView>
 
-      {/* ================= 3. Bottom Tab Bar (保留不变) ================= */}
       <View style={styles.bottomTabBar}>
         <TouchableOpacity style={styles.tabItem}>
           <Ionicons name="grid" size={24} color="#0077B6" />
@@ -362,7 +345,6 @@ export default function AdminDashboard() {
         </TouchableOpacity>
       </View>
 
-      {/* =================  5. QR Scanner Modal (保留不变) ================= */}
       <Modal visible={isScannerVisible} animationType="slide" transparent={false}>
         <View style={styles.scannerContainer}>
           <View style={styles.scannerHeader}>
@@ -395,11 +377,9 @@ export default function AdminDashboard() {
   );
 }
 
-// ================= Styles =================
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8FAFC' },
   
-  // Header 样式 (保留)
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 25, paddingTop: 15, paddingBottom: 20 },
   headerTitle: { fontSize: 28, fontWeight: 'bold', color: '#03045E' },
   headerSubtitle: { fontSize: 16, color: '#0077B6', fontWeight: '600' },
@@ -407,7 +387,6 @@ const styles = StyleSheet.create({
   
   scrollContent: { paddingHorizontal: 20, paddingBottom: 110 },
   
-  // 🌟 Dashboard 专属样式
   welcomeSection: { marginTop: 10, marginBottom: 20 },
   welcomeText: { fontSize: 22, fontWeight: '900', color: '#03045E' },
   dateText: { fontSize: 13, color: '#64748B', marginTop: 4, fontWeight: '500' },
@@ -441,13 +420,11 @@ const styles = StyleSheet.create({
   legendText: { fontSize: 12, color: '#334155', fontWeight: '600' },
   emptyText: { textAlign: 'center', color: '#94A3B8', fontStyle: 'italic', marginVertical: 20 },
 
-  // Bottom Bar (保留)
   bottomTabBar: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 95, backgroundColor: '#FFFFFF', flexDirection: 'row', justifyContent: 'space-evenly', alignItems: 'flex-start', paddingBottom: 20, paddingTop: 10, borderTopLeftRadius: 30, borderTopRightRadius: 30, shadowColor: '#000', shadowOffset: { width: 0, height: -5 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 10 },
   tabItem: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   tabText: { fontSize: 12, color: '#90A4AE', marginTop: 6, fontWeight: '500', textAlign: 'center' },
   tabTextActive: { color: '#0077B6', fontWeight: 'bold' },
 
-  // Scanner (保留)
   scannerContainer: { flex: 1, backgroundColor: '#000' },
   scannerHeader: { position: 'absolute', top: 50, left: 0, right: 0, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 25, zIndex: 10 },
   scannerCloseBtn: { padding: 5, backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 20 },

@@ -14,8 +14,10 @@ import MaintenanceOverlay from '../components/MaintenanceOverlay';
 import { db } from '../../firebaseConfig'; 
 import { collection, serverTimestamp, doc, getDoc, setDoc, addDoc } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
+import { useTranslation } from 'react-i18next';
 
 export default function PaymentScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const params = useLocalSearchParams();
   const auth = getAuth();
@@ -38,19 +40,19 @@ export default function PaymentScreen() {
     let summary = "";
     if (adult && parseInt(adult) > 0) {
       const sub = (parseInt(adult) * parseFloat(prices?.adult || 0)).toFixed(2);
-      summary += `\n• ${adult}x Dewasa : RM ${sub}`;
+      summary += `\n• ${adult}x ${t('label_adult')} : RM ${sub}`;
     }
     if (child && parseInt(child) > 0) {
       const sub = (parseInt(child) * parseFloat(prices?.child || 0)).toFixed(2);
-      summary += `\n• ${child}x Kanak-kanak : RM ${sub}`;
+      summary += `\n• ${child}x ${t('label_child')} : RM ${sub}`;
     }
     if (senior && parseInt(senior) > 0) {
       const sub = (parseInt(senior) * parseFloat(prices?.senior || 0)).toFixed(2);
-      summary += `\n• ${senior}x Warga Emas : RM ${sub}`;
+      summary += `\n• ${senior}x ${t('label_senior')} : RM ${sub}`;
     }
     if (oku && parseInt(oku) > 0) {
       const sub = (parseInt(oku) * parseFloat(prices?.oku || 0)).toFixed(2);
-      summary += `\n• ${oku}x OKU : RM ${sub}`;
+      summary += `\n• ${oku}x ${t('label_oku')} : RM ${sub}`;
     }
     
     return summary;
@@ -78,7 +80,7 @@ export default function PaymentScreen() {
           }
         }
       } catch (error) { 
-        console.log("Gagal memuat QR Code (sesi mungkin tamat):", error.message); 
+        console.log(t('alert_qr_load_fail'), error.message); 
       } finally { 
         setLoadingQr(false); 
       }
@@ -107,27 +109,27 @@ export default function PaymentScreen() {
       
       if (status === 'granted') {
         await MediaLibrary.saveToLibraryAsync(fileUri);
-        Alert.alert("Berjaya! ✅", "QR Code telah disimpan ke galeri anda.");
+        Alert.alert(t('alert_save_success'), t('alert_qr_saved'));
       } else {
         if (await Sharing.isAvailableAsync()) {
           await Sharing.shareAsync(fileUri, {
-            dialogTitle: 'Simpan atau Kongsi QR Code',
+            dialogTitle: t('share_dialog_title'),
             mimeType: 'image/png'
           });
         } else {
-          Alert.alert("Ralat", "Sistem tidak menyokong fungsi penyimpanan ini.");
+          Alert.alert(t('alert_error').replace(": ", ""), t('alert_save_not_supported'));
         }
       }
     } catch (error) {
       console.log("Save Error:", error.message);
-      Alert.alert("Ralat", "Gagal memproses QR Code.");
+      Alert.alert(t('alert_error').replace(": ", ""), t('alert_save_fail'));
     }
   };
 
   const pickReceipt = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (permissionResult.status === 'denied') {
-      Alert.alert('Kebenaran Diperlukan', 'Sila benarkan akses galeri.');
+      Alert.alert(t('alert_permission_required'), t('alert_allow_gallery'));
       return;
     }
 
@@ -161,7 +163,7 @@ export default function PaymentScreen() {
 
   const handleFinalPayment = async () => {
     if (!receiptBase64) {
-      Alert.alert("Ralat", "Sila muat naik resit terlebih dahulu.");
+      Alert.alert(t('alert_error').replace(": ", ""), t('alert_upload_receipt_first'));
       return;
     }
 
@@ -225,9 +227,9 @@ export default function PaymentScreen() {
         
         const ticketSummary = generateNotifSummary();
         
-        const detailedBody = `Hai ${realName}, resit pembayaran untuk tempahan ke ${parkName} telah diterima. \n\nPerincian Tiket:${ticketSummary}\n\nJumlah Keseluruhan : RM ${parseFloat(total).toFixed(2)}\n\nAdmin akan menyemak resit anda segera.`;
+        const detailedBody = `${t('notif_hi')}${realName}${t('notif_body_part1')}${parkName}${t('notif_body_part2')}${t('notif_ticket_details')}${ticketSummary}${t('notif_grand_total')}${parseFloat(total).toFixed(2)}${t('notif_admin_review')}`;
 
-        let notifTitle = "Pembayaran Sedang Disemak";
+        let notifTitle = t('notif_payment_reviewing');
         let notifBody = detailedBody; 
 
         if (settingsSnap.exists() && settingsSnap.data().templates?.pending) {
@@ -238,7 +240,7 @@ export default function PaymentScreen() {
             notifBody = template.body
               .replace(/\[Nama\]/g, realName)
               .replace(/\[Taman\]/g, parkName)
-              .replace(/\[Perincian\]/g, `\n\nPerincian Tiket:${ticketSummary}\n\nJumlah Keseluruhan : RM ${parseFloat(total).toFixed(2)}\n`);
+              .replace(/\[Perincian\]/g, `\n\n${t('notif_ticket_details')}${ticketSummary}${t('notif_grand_total')}${parseFloat(total).toFixed(2)}\n`);
           }
         }
 
@@ -256,11 +258,11 @@ export default function PaymentScreen() {
         console.log("Notif error:", notifError);
       }
 
-      Alert.alert("Berjaya! 🎉", "Resit dihantar. Admin akan menyemak segera.", [
-        { text: "OK", onPress: () => router.replace('/mytickets') }
+      Alert.alert(t('alert_payment_success'), t('alert_payment_submitted'), [
+        { text: t('alert_ok'), onPress: () => router.replace('/mytickets') }
       ]);
     } catch (error) {
-      Alert.alert("Ralat", error.message);
+      Alert.alert(t('alert_error').replace(": ", ""), error.message);
     } finally { setIsProcessing(false); }
   };
 
@@ -278,7 +280,7 @@ export default function PaymentScreen() {
 
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}><Ionicons name="chevron-back" size={28} color="#03045E" /></TouchableOpacity>
-        <Text style={styles.headerTitle}>Bayaran</Text>
+        <Text style={styles.headerTitle}>{t('header_payment')}</Text>
         <View style={{ width: 28 }} />
       </View>
 
@@ -291,20 +293,20 @@ export default function PaymentScreen() {
               <Image source={{ uri: parkQrUrl }} style={styles.qrImage} />
               <TouchableOpacity style={styles.downloadBtn} onPress={saveQrToGallery}>
                 <Ionicons name="download-outline" size={18} color="#0077B6" />
-                <Text style={styles.downloadBtnText}>Simpan QR ke Galeri</Text>
+                <Text style={styles.downloadBtnText}>{t('btn_save_qr_gallery')}</Text>
               </TouchableOpacity>
             </>
           ) : (
             <View style={{ alignItems: 'center', padding: 20 }}>
               <Ionicons name="qr-code-outline" size={60} color="#CBD5E1" />
-              <Text style={{ color: '#94A3B8', marginTop: 10, fontWeight: 'bold' }}>QR Code Tidak Tersedia</Text>
-              <Text style={{ color: '#94A3B8', fontSize: 12, textAlign: 'center', marginTop: 5 }}>Sila hubungi admin untuk mendapatkan maklumat pembayaran.</Text>
+              <Text style={{ color: '#94A3B8', marginTop: 10, fontWeight: 'bold' }}>{t('msg_qr_unavailable')}</Text>
+              <Text style={{ color: '#94A3B8', fontSize: 12, textAlign: 'center', marginTop: 5 }}>{t('msg_contact_admin_payment')}</Text>
             </View>
           )}
           <Text style={[styles.totalText, { marginTop: 15 }]}>RM {parseFloat(total).toFixed(2)}</Text>
         </View>
 
-        <Text style={styles.sectionTitle}>Muat Naik Resit</Text>
+        <Text style={styles.sectionTitle}>{t('title_upload_receipt')}</Text>
         
         {!selectedReceiptUri ? (
           <TouchableOpacity style={styles.uploadRow} onPress={pickReceipt}>
@@ -312,8 +314,8 @@ export default function PaymentScreen() {
               <Ionicons name="cloud-upload-outline" size={24} color="#0077B6" />
             </View>
             <View style={styles.uploadTextCol}>
-              <Text style={styles.uploadMainText}>Klik untuk muat naik resit</Text>
-              <Text style={styles.uploadSubText}>Format JPG, PNG (Maks 1MB)</Text>
+              <Text style={styles.uploadMainText}>{t('click_to_upload_receipt')}</Text>
+              <Text style={styles.uploadSubText}>{t('upload_format_hint')}</Text>
             </View>
           </TouchableOpacity>
         ) : (
@@ -324,7 +326,7 @@ export default function PaymentScreen() {
               <Text style={styles.fileMetaText}>{fileDetails?.type} • {fileDetails?.size} KB</Text>
             </View>
             <TouchableOpacity style={styles.viewBtn} onPress={() => setShowPreview(true)}>
-              <Text style={styles.viewBtnText}>Lihat</Text>
+              <Text style={styles.viewBtnText}>{t('btn_view_receipt')}</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => {setSelectedReceiptUri(null); setReceiptBase64(null);}}>
               <Ionicons name="trash-outline" size={20} color="#FF4D4D" />
@@ -334,7 +336,7 @@ export default function PaymentScreen() {
 
         <View style={styles.warningBox}>
           <Ionicons name="information-circle" size={18} color="#0369A1" />
-          <Text style={styles.warningText}>Tiket akan dijana selepas admin mengesahkan pembayaran anda.</Text>
+          <Text style={styles.warningText}>{t('notice_ticket_generation')}</Text>
         </View>
 
       </ScrollView>
@@ -345,7 +347,7 @@ export default function PaymentScreen() {
           onPress={handleFinalPayment} 
           disabled={isProcessing || !receiptBase64}
         >
-          {isProcessing ? <ActivityIndicator color="#FFF" /> : <Text style={styles.payBtnText}>Hantar & Sahkan</Text>}
+          {isProcessing ? <ActivityIndicator color="#FFF" /> : <Text style={styles.payBtnText}>{t('btn_submit_confirm')}</Text>}
         </TouchableOpacity>
       </View>
     </SafeAreaView>

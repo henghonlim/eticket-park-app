@@ -17,10 +17,13 @@ import { loginUser, resetUserPassword, logoutUser } from '../services/AuthServic
 import { db } from '../../firebaseConfig';
 import { collection, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useTranslation } from 'react-i18next';
+import LanguageToggle from '../components/LanguageToggle';
 
 const MARINE_LOGO = require('../../assets/marinepark-logo.png');
 
 export default function LoginScreen() {
+  const { t } = useTranslation(); // 激活翻译功能
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -28,7 +31,7 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     if (!email || !password) {
-      alert("Sila masukkan e-mel dan kata laluan.");
+      alert(t('alert_empty_fields'));
       return;
     }
 
@@ -40,26 +43,21 @@ export default function LoginScreen() {
       
       if (accountStatus === 'Digantung') {
         await logoutUser();
-        alert("Akaun Digantung: Akses ditolak. Sila hubungi admin.");
+        alert(t('alert_account_suspended'));
         setEmail('');
         setPassword('');
         return; 
       }
 
-      // 1. Jana Session ID unik
       const newSessionId = `SESSION_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-      
-      // 2. Simpan di memori peranti ini
       await AsyncStorage.setItem('localSessionId', newSessionId);
       
-      // 3. Kemaskini di Firestore
       const userRef = doc(db, 'users', user.uid);
       await updateDoc(userRef, {
         currentSessionId: newSessionId
       });
 
       if (role === 'admin') {
-
         try {
           await addDoc(collection(db, "auditLogs"), {
             action: "Log Masuk Sistem",
@@ -70,17 +68,17 @@ export default function LoginScreen() {
           console.log("Gagal merekod log aktiviti:", logError);
         }
 
-        alert("Selamat Datang, Admin!");
+        alert(t('alert_admin_welcome'));
         router.replace('/admindashboard'); 
       } else {
-        alert("Log Masuk Berjaya!");
+        alert(t('alert_login_success'));
         router.replace('/usermainpage'); 
       }
 
     } catch (error) {
       await AsyncStorage.removeItem('localSessionId');
       console.log("Log Masuk Gagal:", error.message);
-      alert("Gagal Log Masuk: E-mel atau kata laluan salah.");
+      alert(t('alert_login_failed'));
       
       setEmail('');
       setPassword('');
@@ -91,43 +89,46 @@ export default function LoginScreen() {
 
   const handleForgotPassword = async () => {
     if (!email) {
-      alert("Sila masukkan e-mel anda di ruangan atas terlebih dahulu.");
+      alert(t('alert_enter_email_first'));
       return;
     }
 
     try {
       await resetUserPassword(email);
-      alert("Pautan tetapan semula kata laluan telah dihantar ke e-mel anda! Sila semak peti masuk (inbox) atau spam.");
+      alert(t('alert_reset_link_sent'));
     } catch (error) {
       console.log(error.message);
-      alert("Ralat: " + error.message);
+      alert(t('alert_error') + error.message);
     }
   };
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* 语言切换按钮 - 放置在右上角 */}
+      <View style={styles.toggleWrapper}>
+        <LanguageToggle />
+      </View>
+
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1 }}
       >
-
         <View style={styles.keyboardView}>
           <View style={styles.headerContainer}>
             <Image 
               source={MARINE_LOGO}
               style={styles.logoImage} 
             />
-            <Text style={styles.title}>Log Masuk</Text>
-            <Text style={styles.subtitle}>Sistem e-Tiket Taman Laut</Text>
+            <Text style={styles.title}>{t('login_title')}</Text>
+            <Text style={styles.subtitle}>{t('system_subtitle')}</Text>
           </View>
 
           <View style={styles.formContainer}>
-            
             <View style={styles.inputField}>
               <Ionicons name="mail-outline" size={20} color="#0077B6" style={styles.leftIcon} />
               <TextInput
                 style={styles.inputText}
-                placeholder="E-mel"
+                placeholder={t('email_placeholder')}
                 placeholderTextColor="#90A4AE"
                 value={email}
                 onChangeText={setEmail}
@@ -140,7 +141,7 @@ export default function LoginScreen() {
               <Ionicons name="lock-closed-outline" size={20} color="#0077B6" style={styles.leftIcon} />
               <TextInput
                 style={styles.passwordInput}
-                placeholder="Kata Laluan"
+                placeholder={t('password_placeholder')}
                 placeholderTextColor="#90A4AE"
                 value={password}
                 onChangeText={setPassword}
@@ -160,7 +161,7 @@ export default function LoginScreen() {
 
             <View style={styles.forgotPasswordContainer}>
               <TouchableOpacity onPress={handleForgotPassword}>
-                <Text style={styles.forgotPasswordText}>Lupa Kata Laluan?</Text>
+                <Text style={styles.forgotPasswordText}>{t('forgot_password')}</Text>
               </TouchableOpacity>
             </View>
 
@@ -172,14 +173,14 @@ export default function LoginScreen() {
               {isLoading ? (
                 <ActivityIndicator size="small" color="#FFFFFF" />
               ) : (
-                <Text style={styles.mainButtonText}>Log Masuk</Text>
+                <Text style={styles.mainButtonText}>{t('login_button')}</Text>
               )}
             </TouchableOpacity>
 
             <View style={styles.footer}>
-              <Text style={styles.footerText}>Belum ada akaun? </Text>
+              <Text style={styles.footerText}>{t('no_account')} </Text>
               <TouchableOpacity onPress={() => router.push('/register')}>
-                <Text style={styles.linkText}>Daftar sekarang</Text>
+                <Text style={styles.linkText}>{t('register_now')}</Text>
               </TouchableOpacity>
             </View>
 
@@ -195,10 +196,17 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#CAF0F8',
   },
+  toggleWrapper: {
+    alignItems: 'flex-end',
+    paddingHorizontal: 25,
+    paddingTop: 10,
+    zIndex: 10,
+  },
   keyboardView: {
     flex: 1,
     justifyContent: 'center',
     paddingHorizontal: 25,
+    paddingBottom: 20,
   },
   headerContainer: {
     alignItems: 'center',

@@ -12,7 +12,6 @@ import { getAuth } from 'firebase/auth';
 import { BarChart, PieChart } from 'react-native-gifted-charts';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
-
 import AdminHeader from '../components/AdminHeader';
 import MaintenanceOverlay from '../components/MaintenanceOverlay';
 
@@ -23,7 +22,6 @@ export default function AdminFinanceScreen() {
 
   const [visitorFilter, setVisitorFilter] = useState('Semua'); 
   
-  // Musim 专属 Filter States
   const [seasonView, setSeasonView] = useState('Bulan'); 
   const [seasonMonth, setSeasonMonth] = useState(new Date().getMonth());
   const [seasonYear, setSeasonYear] = useState(new Date().getFullYear());
@@ -127,7 +125,6 @@ export default function AdminFinanceScreen() {
 
     const sortedParksBySales = Object.keys(parkStats).sort((a,b) => parkStats[b].tickets - parkStats[a].tickets);
 
-    // ================= 🌟 MUSIM 引擎 (Heatmap 模式) =================
     const allValidTickets = rawTickets.filter(tk => tk.status === 'Sah' || tk.status === 'Telah Digunakan');
     let seasonDataFinal = [];
     
@@ -171,7 +168,6 @@ export default function AdminFinanceScreen() {
     };
   }, [rawTickets, rawTransactions, dateFilter, seasonView, seasonMonth, seasonYear, seasonDecade]);
 
-  // =============== 时间穿梭机控制 ===============
   const handlePrevTime = () => {
     if (seasonView === 'Hari') {
       if (seasonMonth === 0) { setSeasonMonth(11); setSeasonYear(y => y - 1); } else setSeasonMonth(m => m - 1);
@@ -194,7 +190,6 @@ export default function AdminFinanceScreen() {
 
   const exportPDFReport = async () => {
     try {
-      // 1. 生成每个公园的详细列表 (加入年龄类别)
       let parkDetailsHtml = "";
       Object.keys(processedData.parkStats).forEach(park => {
         const p = processedData.parkStats[park];
@@ -220,7 +215,6 @@ export default function AdminFinanceScreen() {
         `;
       });
 
-      // 2. 生成流失金额明细
       let lossDetailsHtml = "";
       if (Object.keys(processedData.lossStats || {}).length > 0) {
         Object.keys(processedData.lossStats).forEach(park => {
@@ -235,7 +229,6 @@ export default function AdminFinanceScreen() {
         lossDetailsHtml = `<p style="color: #9CA3AF; font-size: 12px; font-style: italic;">Tiada rekod tiket ditolak atau dibatalkan.</p>`;
       }
 
-      // 3. 生成旺季洞察文本
       const peakHtml = processedData.peakInfoSeason.max > 0 
         ? `Waktu puncak dikesan pada <b>${processedData.peakInfoSeason.fullLabel}</b> dengan kehadiran seramai <b style="color: #D97706;">${processedData.peakInfoSeason.max} Pax</b>.`
         : `Tiada data kemasukan pelawat yang mencukupi untuk menganalisis musim puncak dalam tempoh ini.`;
@@ -358,25 +351,24 @@ export default function AdminFinanceScreen() {
     }
   };
 
-  // ================= 🌟 热力网格渲染引擎 =================
   const renderHeatmap = () => {
     const data = processedData.seasonDataFinal;
-    const maxVal = processedData.peakInfoSeason.max || 1; // 避免除以 0
+    const maxVal = processedData.peakInfoSeason.max || 1;
 
     const getBgColor = (val) => {
-      if (val === 0) return '#F8FAFC'; // 0 的时候是干净的灰色
+      if (val === 0) return '#F8FAFC';
       const ratio = val / maxVal;
-      if (ratio <= 0.3) return '#BAE6FD'; // 浅蓝
-      if (ratio <= 0.6) return '#38BDF8'; // 中蓝
-      if (ratio <= 0.9) return '#0284C7'; // 深蓝
-      return '#03045E'; // 极深蓝 (旺季)
+      if (ratio <= 0.3) return '#BAE6FD';
+      if (ratio <= 0.6) return '#38BDF8';
+      if (ratio <= 0.9) return '#0284C7';
+      return '#03045E';
     };
 
     const getTextColor = (val) => {
       if (val === 0) return '#94A3B8';
       const ratio = val / maxVal;
-      if (ratio > 0.4) return '#FFFFFF'; // 背景深的时候用白字
-      return '#03045E'; // 背景浅的时候用深字
+      if (ratio > 0.4) return '#FFFFFF';
+      return '#03045E';
     };
 
     let itemStyle = styles.heatBlockHari;
@@ -552,7 +544,6 @@ export default function AdminFinanceScreen() {
               </View>
             )}
 
-            {/* ================= 🌟 修复：TAB 5: 全新热力网格 (Heatmap) ================= */}
             {activeTab === 'season' && (
               <View>
                 <View style={styles.premiumChartCard}>
@@ -572,7 +563,6 @@ export default function AdminFinanceScreen() {
                     <TouchableOpacity onPress={handleNextTime} style={styles.timeNavBtn}><Ionicons name="chevron-forward" size={20} color="#03045E" /></TouchableOpacity>
                   </View>
 
-                  {/* 🌟 核心：热力网格渲染 */}
                   {renderHeatmap()}
 
                 </View>
@@ -699,7 +689,6 @@ const styles = StyleSheet.create({
   vCatLabel: { fontSize: 11, color: '#94A3B8', fontWeight: 'bold' },
   vCatValue: { fontSize: 16, fontWeight: '900', color: '#1E293B', marginTop: 2 },
 
-  // 🌟 全新热力网格 (Heatmap) 专属样式
   seasonToggleRow: { flexDirection: 'row', backgroundColor: '#F1F5F9', borderRadius: 12, padding: 4, marginTop: 15, marginBottom: 15 },
   seasonToggleBtn: { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 8 },
   seasonToggleBtnActive: { backgroundColor: '#FFFFFF', elevation: 2 },

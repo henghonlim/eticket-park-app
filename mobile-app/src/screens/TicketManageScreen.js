@@ -208,7 +208,19 @@ export default function TicketManageScreen() {
   };
 
   const handlePriceChange = (category, type, value) => {
-    setPrices(prev => ({ ...prev, [category]: { ...prev[category], [type]: value } }));
+    let cleaned = value.replace(/[^0-9.]/g, '');
+
+    // 2. 如果第一个字符是小数点，自动补0
+    if (cleaned.startsWith('.')) {
+      cleaned = '0' + cleaned;
+    }
+
+    // 3. 防止用户输入多个小数点 (例如 12.5.5)
+    const parts = cleaned.split('.');
+    if (parts.length > 2) {
+      cleaned = parts[0] + '.' + parts.slice(1).join('');
+    }
+    setPrices(prev => ({ ...prev, [category]: { ...prev[category], [type]: cleaned } }));
   };
 
   const handleSearchLocation = (text) => {
@@ -297,6 +309,25 @@ export default function TicketManageScreen() {
       Alert.alert("Ralat", "Sila masukkan semua maklumat termasuk negeri dan lokasi peta.");
       return;
     }
+
+    if (parkName.trim().length < 3) {
+      Alert.alert("Ralat Format", "Nama Taman Laut mestilah sekurang-kurangnya 3 aksara.");
+      return;
+    }
+
+    // 🌟 新增：拦截简介太短
+    if (description.trim().length < 10) {
+      Alert.alert("Ralat Format", "Penerangan mestilah sekurang-kurangnya 10 aksara.");
+      return;
+    }
+
+    const allPrices = [...Object.values(prices.msia), ...Object.values(prices.intl)];
+    for (let price of allPrices) {
+      if (price !== '' && parseFloat(price) < 0) {
+        Alert.alert("Ralat Format", "Harga tiket tidak boleh bernilai negatif.");
+        return;
+      }
+    }
     
     setLoading(true);
     try {
@@ -317,7 +348,7 @@ export default function TicketManageScreen() {
 
       if (editingParkId) { 
         await updatePark(editingParkId, finalData); 
-        Alert.alert("Berjaya", "Data taman telah dikemaskini."); 
+        Alert.alert("Berjaya", "Data taman telah dikemas kini."); 
       } else { 
         await addPark(finalData); 
         Alert.alert("Berjaya", "Taman Laut telah ditambah!"); 
@@ -386,7 +417,7 @@ export default function TicketManageScreen() {
               console.log("Gagal log pengesahan tiket:", logError);
             }
 
-            Alert.alert("Berjaya", `Tiket dan Transaksi telah dikemaskini.`);
+            Alert.alert("Berjaya", `Tiket dan Transaksi telah dikemas kini.`);
             setIsDetailModalVisible(false);
           } catch (error) {
             console.error("Update status error:", error);
@@ -636,7 +667,7 @@ export default function TicketManageScreen() {
             </TouchableOpacity>
 
             <Text style={styles.formLabel}>Nama Taman Laut</Text>
-            <TextInput style={styles.formInput} value={parkName} onChangeText={setParkName} placeholder="Contoh: Pulau Redang" />
+            <TextInput style={styles.formInput} value={parkName} onChangeText={setParkName} placeholder="Contoh: Pulau Redang" maxLength={50} />
 
             <Text style={styles.formLabel}>Pilih Negeri</Text>
             <TouchableOpacity style={styles.pickerContainer} onPress={() => setShowPicker(true)}>
@@ -668,6 +699,7 @@ export default function TicketManageScreen() {
               style={[styles.formInput, { height: 100, textAlignVertical: 'top', paddingTop: 12 }]} 
               value={description} onChangeText={setDescription} placeholder="Maklumat tentang taman laut..." 
               multiline={true} numberOfLines={4}
+              maxLength={500}
             />
 
             <Text style={styles.formLabel}>Cari & Tetapkan Lokasi Peta</Text>

@@ -11,10 +11,12 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import MaintenanceOverlay from '../components/MaintenanceOverlay'; 
+import { useTranslation } from 'react-i18next';
 
 const { width, height } = Dimensions.get('window');
 
 export default function UserMapScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const mapRef = useRef(null);
   const [androidMarkerPatch, setAndroidMarkerPatch] = useState(0);
@@ -26,7 +28,6 @@ export default function UserMapScreen() {
   const [statesList, setStatesList] = useState(['Semua']);
   const [selectedState, setSelectedState] = useState('Semua');
   const [showFilter, setShowFilter] = useState(false);
-  const { width, height } = Dimensions.get('window');
   
   const [selectedPark, setSelectedPark] = useState(null);
   const [trackMarkers, setTrackMarkers] = useState(true);
@@ -40,7 +41,6 @@ export default function UserMapScreen() {
   }, []);
 
   useEffect(() => {
-
     const fetchParks = async () => {
       try {
         const querySnapshot = await getDocs(collection(db, "parks"));
@@ -138,7 +138,7 @@ export default function UserMapScreen() {
   const openGoogleMaps = (park) => {
     const lat = park.location.latitude;
     const lon = park.location.longitude;
-    const label = encodeURIComponent(park.name || "Taman Laut"); 
+    const label = encodeURIComponent(park.name || t('map_default_park_name')); 
 
     const url = Platform.select({
       ios: `maps:0,0?q=${label}@${lat},${lon}`,
@@ -152,25 +152,21 @@ export default function UserMapScreen() {
         } else {
           const browserUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
           Linking.openURL(browserUrl).catch(() => {
-            Alert.alert("Ralat", "Tidak dapat membuka peta di telefon anda.");
+            Alert.alert(t('alert_error').replace(": ", ""), t('alert_map_open_fail'));
           });
         }
       })
       .catch((err) => {
         console.log("Routing Error:", err);
-        Alert.alert("Ralat", "Sistem peta sedang sibuk.");
+        Alert.alert(t('alert_error').replace(": ", ""), t('alert_map_system_busy'));
       });
-  };
-
-  const handleDummyPress = (featureName) => {
-    Alert.alert("Akan Datang", `Fungsi ${featureName} akan datang!`);
   };
 
   if (loading) {
     return (
       <SafeAreaView style={styles.centerContainer}>
         <ActivityIndicator size="large" color="#03045E" />
-        <Text style={{ marginTop: 15, color: '#03045E', fontWeight: 'bold' }}>Memuatkan Peta...</Text>
+        <Text style={{ marginTop: 15, color: '#03045E', fontWeight: 'bold' }}>{t('map_loading')}</Text>
       </SafeAreaView>
     );
   }
@@ -220,7 +216,9 @@ export default function UserMapScreen() {
         <TouchableOpacity style={styles.filterBtn} onPress={() => setShowFilter(true)}>
           <Ionicons name="filter" size={20} color="#03045E" />
           <Text style={styles.filterText}>
-            Lokasi: <Text style={{fontWeight: 'bold'}}>{selectedState}</Text>
+            {t('map_location_filter')}<Text style={{fontWeight: 'bold'}}>
+              {selectedState === 'Semua' ? t('map_all_states') : (selectedState === 'Lain-lain' ? t('map_other_states') : selectedState)}
+            </Text>
           </Text>
           <Ionicons name="chevron-down" size={20} color="#64748B" />
         </TouchableOpacity>
@@ -241,7 +239,7 @@ export default function UserMapScreen() {
               <Text style={styles.cardTitle} numberOfLines={1}>{selectedPark.name}</Text>
               
               <Text style={styles.cardDesc} numberOfLines={2}>
-                {selectedPark.description || 'Terokai keindahan hidupan marin dan terumbu karang yang menakjubkan di sini.'}
+                {selectedPark.description || t('map_default_desc')}
               </Text>
               
               <TouchableOpacity 
@@ -249,7 +247,7 @@ export default function UserMapScreen() {
                 onPress={() => openGoogleMaps(selectedPark)}
               >
                 <Ionicons name="navigate-circle" size={22} color="#FFFFFF" />
-                <Text style={styles.navButtonText}>Buka Navigasi</Text>
+                <Text style={styles.navButtonText}>{t('map_open_navigation')}</Text>
               </TouchableOpacity>
             </View>
           </TouchableOpacity>
@@ -261,19 +259,22 @@ export default function UserMapScreen() {
           <View style={styles.modalOverlay}>
             <TouchableWithoutFeedback>
               <View style={styles.dropdownBox}>
-                <Text style={styles.modalTitle}>Pilih Negeri</Text>
-                {statesList.map((state, index) => (
-                  <TouchableOpacity 
-                    key={index} 
-                    style={styles.dropdownItem} 
-                    onPress={() => handleFilterSelect(state)}
-                  >
-                    <Text style={[styles.dropdownItemText, selectedState === state && {fontWeight: 'bold', color: '#03045E'}]}>
-                      {state}
-                    </Text>
-                    {selectedState === state && <Ionicons name="checkmark-circle" size={24} color="#0077B6" />}
-                  </TouchableOpacity>
-                ))}
+                <Text style={styles.modalTitle}>{t('map_select_state')}</Text>
+                {statesList.map((state, index) => {
+                  const displayState = state === 'Semua' ? t('map_all_states') : (state === 'Lain-lain' ? t('map_other_states') : state);
+                  return (
+                    <TouchableOpacity 
+                      key={index} 
+                      style={styles.dropdownItem} 
+                      onPress={() => handleFilterSelect(state)}
+                    >
+                      <Text style={[styles.dropdownItemText, selectedState === state && {fontWeight: 'bold', color: '#03045E'}]}>
+                        {displayState}
+                      </Text>
+                      {selectedState === state && <Ionicons name="checkmark-circle" size={24} color="#0077B6" />}
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             </TouchableWithoutFeedback>
           </View>
@@ -283,19 +284,19 @@ export default function UserMapScreen() {
       <View style={styles.bottomTabBar}>
         <TouchableOpacity style={styles.tabItem} onPress={() => router.replace('/usermainpage')}>
           <Ionicons name="compass-outline" size={32} color="#90A4AE" />
-          <Text style={styles.tabText}>Laman Utama</Text>
+          <Text style={styles.tabText}>{t('tab_home')}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.tabItem} onPress={() => router.replace('/mytickets')}>
           <Ionicons name="ticket-outline" size={32} color="#90A4AE" />
-          <Text style={styles.tabText}>Tiket Saya</Text>
+          <Text style={styles.tabText}>{t('tab_my_tickets')}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.tabItem} onPress={() => router.replace('/weather')}>
           <Ionicons name="partly-sunny-outline" size={32} color="#90A4AE" />
-          <Text style={styles.tabText}>Cuaca</Text>
+          <Text style={styles.tabText}>{t('tab_weather')}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.tabItem}>
           <Ionicons name="map" size={32} color="#0077B6" />
-          <Text style={[styles.tabText, styles.tabTextActive]}>Peta</Text>
+          <Text style={[styles.tabText, styles.tabTextActive]}>{t('tab_map')}</Text>
         </TouchableOpacity>
       </View>
       

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   View, Text, StyleSheet, TouchableOpacity, 
   TextInput, Image, ScrollView, Modal, TouchableWithoutFeedback, 
-  FlatList 
+  FlatList, Alert
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -12,8 +12,14 @@ import { logoutUser } from '../services/AuthService';
 import { getAllParks } from '../services/ParkService';
 import NotificationBell from '../components/NotificationBell';
 import MaintenanceOverlay from '../components/MaintenanceOverlay';
+import { useTranslation } from 'react-i18next';
+import LanguageToggle from '../components/LanguageToggle';
+import { auth, db } from '../../firebaseConfig'; 
+import { doc, getDoc } from 'firebase/firestore';
 
 export default function UserMainPage() {
+  const { t } = useTranslation();
+
   const [parks, setParks] = useState([]);
   const [isProfileMenuVisible, setIsProfileMenuVisible] = useState(false);
   const [isFilterModalVisible, setIsFilterModalVisible] = useState(false);
@@ -22,8 +28,9 @@ export default function UserMainPage() {
   const [maxPrice, setMaxPrice] = useState(100);
   const [searchQuery, setSearchQuery] = useState('');
 
+  // 把 "Semua Negeri" 替换成翻译 t('all_states')
   const NEGERI_LIST = [
-    { label: 'Semua Negeri', value: 'Semua' },
+    { label: t('all_states'), value: 'Semua' },
     { label: 'Johor', value: 'Johor' }, { label: 'Kedah', value: 'Kedah' },
     { label: 'Kelantan', value: 'Kelantan' }, { label: 'Melaka', value: 'Melaka' },
     { label: 'Negeri Sembilan', value: 'Negeri Sembilan' }, { label: 'Pahang', value: 'Pahang' },
@@ -47,10 +54,64 @@ export default function UserMainPage() {
     try {
       setIsProfileMenuVisible(false);
       await logoutUser();
-      alert("Anda telah berjaya log keluar.");
+      alert(t('alert_logout_success'));
       router.replace('/login');
     } catch (error) {
-      alert("Ralat: " + error.message);
+      alert(t('alert_error') + error.message);
+    }
+  };
+
+  const handleBookNow = async (parkId) => {
+    try {
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        router.replace('/login');
+        return;
+      }
+
+      // 获取当前用户的完整资料
+      const userRef = doc(db, "users", currentUser.uid);
+      const userSnap = await getDoc(userRef);
+
+      if (userSnap.exists()) {
+        const data = userSnap.data();
+        
+        // 提取并清洗 7 个关键字段
+        const uName = (data.userName || data.username || '').trim();
+        const phone = (data.phone || '').trim();
+        const emerg = (data.emergencyContact || '').trim();
+        const fName = (data.fullName || '').trim();
+        const email = (data.email || currentUser.email || '').trim();
+        const ic    = (data.icPassport || data.ic || '').trim();
+        const nat   = (data.nationality || '').trim();
+
+        // 如果任何一个字段是空的
+        if (!uName || !phone || !emerg || !fName || !email || !ic || !nat) {
+          Alert.alert(
+            t('alert_incomplete_profile_title'),
+            t('alert_incomplete_profile_desc'),
+            [
+              { 
+                text: t('btn_close_alert'), 
+                style: 'cancel' 
+              },
+              { 
+                text: t('btn_update_now'), 
+                onPress: () => router.push('/editprofile') 
+              }
+            ]
+          );
+          return; // 强制拦截，不再继续执行后面的跳转逻辑
+        }
+      }
+
+      // 7个资料全都齐全：正常放行，进入买票页面
+      router.push({ pathname: '/buyticket', params: { id: parkId } });
+
+    } catch (error) {
+      console.log("Error checking user profile before booking:", error);
+      // 网络错误时作为后备方案允许跳转，购票页仍会校验
+      router.push({ pathname: '/buyticket', params: { id: parkId } });
     }
   };
 
@@ -78,9 +139,13 @@ export default function UserMainPage() {
       <MaintenanceOverlay />
       
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Acara Penemuan</Text>
+        <Text style={styles.headerTitle}>{t('discovery_events')}</Text>
         <View style={styles.headerIcons}>
           
+          <View style={{ marginRight: 10 }}>
+            <LanguageToggle />
+          </View>
+
           <NotificationBell />
 
           <TouchableOpacity onPress={() => setIsProfileMenuVisible(true)}>
@@ -94,7 +159,7 @@ export default function UserMainPage() {
           <Ionicons name="search-outline" size={20} color="#90A4AE" style={styles.searchIcon} />
           <TextInput 
             style={styles.searchInput} 
-            placeholder="Cari taman laut, negeri..." 
+            placeholder={t('search_placeholder')} 
             placeholderTextColor="#90A4AE" 
             value={searchQuery}
             onChangeText={setSearchQuery} 
@@ -107,8 +172,8 @@ export default function UserMainPage() {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        <Text style={styles.sectionTitle}>Taman Laut Malaysia</Text>
-        <Text style={styles.sectionSubtitle}>Pengalaman marin eksklusif menanti anda</Text>
+        <Text style={styles.sectionTitle}>{t('marine_parks_malaysia')}</Text>
+        <Text style={styles.sectionSubtitle}>{t('exclusive_marine_experience')}</Text>
 
         <View style={styles.verticalEventList}>
           {filteredParks.length > 0 ? (
@@ -117,7 +182,7 @@ export default function UserMainPage() {
                 <TouchableOpacity 
                   style={styles.imageContainer}
                   activeOpacity={0.85}
-                  onPress={() => router.push({ pathname: '/buyticket', params: { id: park.id } })}
+                  onPress={() => handleBookNow(park.id)} 
                 >
                   <Image 
                     source={{ 
@@ -141,9 +206,9 @@ export default function UserMainPage() {
                   <TouchableOpacity 
                     style={styles.bookButton} 
                     activeOpacity={0.8}
-                    onPress={() => router.push({ pathname: '/buyticket', params: { id: park.id } })}
+                    onPress={() => handleBookNow(park.id)} 
                   >
-                    <Text style={styles.bookButtonText}>Tempah Sekarang</Text>
+                    <Text style={styles.bookButtonText}>{t('book_now')}</Text>
                     <Ionicons name="arrow-forward" size={14} color="#FFFFFF" style={{ marginLeft: 4 }} />
                   </TouchableOpacity>
                 </View>
@@ -151,7 +216,7 @@ export default function UserMainPage() {
             ))
           ) : (
             <Text style={{ textAlign: 'center', color: '#90A4AE', marginTop: 30, fontSize: 16 }}>
-              Tiada hasil carian untuk "{searchQuery}".
+              {t('no_search_results')} "{searchQuery}".
             </Text>
           )}
         </View>
@@ -161,19 +226,19 @@ export default function UserMainPage() {
       <View style={styles.bottomTabBar}>
         <TouchableOpacity style={styles.tabItem}>
           <Ionicons name="compass" size={32} color="#0077B6" />
-          <Text style={[styles.tabText, styles.tabTextActive]}>Laman Utama</Text>
+          <Text style={[styles.tabText, styles.tabTextActive]}>{t('tab_home')}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.tabItem} onPress={() => router.push('/mytickets')}>
           <Ionicons name="ticket-outline" size={32} color="#90A4AE" />
-          <Text style={styles.tabText}>Tiket Saya</Text>
+          <Text style={styles.tabText}>{t('tab_my_tickets')}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.tabItem} onPress={() => router.push('/weather')}>
           <Ionicons name="partly-sunny-outline" size={32} color="#90A4AE" />
-          <Text style={styles.tabText}>Cuaca</Text>
+          <Text style={styles.tabText}>{t('tab_weather')}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.tabItem} onPress={() => router.replace('/usermap')}>
           <Ionicons name="map-outline" size={32} color="#90A4AE" />
-          <Text style={styles.tabText}>Peta</Text>
+          <Text style={styles.tabText}>{t('tab_map')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -184,17 +249,17 @@ export default function UserMainPage() {
               <View style={styles.dropdownMenu}>
                 <TouchableOpacity style={styles.menuItem} onPress={() => { setIsProfileMenuVisible(false); router.push('/editprofile'); }}>
                   <Ionicons name="person-outline" size={20} color="#03045E" />
-                  <Text style={styles.menuText}>Maklumat Akaun</Text>
+                  <Text style={styles.menuText}>{t('menu_account_info')}</Text>
                 </TouchableOpacity>
                 <View style={styles.divider} />
                 <TouchableOpacity style={styles.menuItem} onPress={() => { setIsProfileMenuVisible(false); router.push('/favorites')}}>
                   <Ionicons name="heart-outline" size={20} color="#03045E" />
-                  <Text style={styles.menuText}>Kegemaran</Text>
+                  <Text style={styles.menuText}>{t('menu_favorites')}</Text>
                 </TouchableOpacity>
                 <View style={styles.divider} />
                 <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
                   <Ionicons name="log-out-outline" size={20} color="#ef4444" />
-                  <Text style={[styles.menuText, { color: '#ef4444' }]}>Log Keluar</Text>
+                  <Text style={[styles.menuText, { color: '#ef4444' }]}>{t('menu_logout')}</Text>
                 </TouchableOpacity>
               </View>
             </TouchableWithoutFeedback>
@@ -207,24 +272,24 @@ export default function UserMainPage() {
           {!showPicker ? (
             <View style={styles.filterModalContainer}>
               <View style={styles.filterHeader}>
-                <Text style={styles.filterTitle}>Penapis Carian</Text>
+                <Text style={styles.filterTitle}>{t('filter_search_title')}</Text>
                 <TouchableOpacity onPress={() => setIsFilterModalVisible(false)}>
                   <Ionicons name="close" size={28} color="#03045E" />
                 </TouchableOpacity>
               </View>
 
-              <Text style={styles.filterLabel}>Pilih Negeri</Text>
+              <Text style={styles.filterLabel}>{t('filter_select_state')}</Text>
               <TouchableOpacity 
                 style={[styles.pickerWrapper, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 15 }]} 
                 onPress={() => setShowPicker(true)}
               >
                 <Text style={{ color: '#334155', fontSize: 16 }}>
-                  {selectedNegeri === 'Semua' ? 'Semua Negeri' : selectedNegeri}
+                  {selectedNegeri === 'Semua' ? t('all_states') : selectedNegeri}
                 </Text>
                 <Ionicons name="chevron-down" size={20} color="#94A3B8" />
               </TouchableOpacity>
 
-              <Text style={styles.filterLabel}>Harga Maksimum (Dewasa): RM {maxPrice}</Text>
+              <Text style={styles.filterLabel}>{t('filter_max_price')}: RM {maxPrice}</Text>
               <Slider
                 style={styles.slider}
                 minimumValue={0}
@@ -242,13 +307,13 @@ export default function UserMainPage() {
               </View>
 
               <TouchableOpacity style={styles.applyFilterBtn} onPress={() => setIsFilterModalVisible(false)}>
-                <Text style={styles.applyFilterText}>Gunakan Penapis</Text>
+                <Text style={styles.applyFilterText}>{t('filter_apply_button')}</Text>
               </TouchableOpacity>
             </View>
           ) : (
             <View style={{ width: '85%', backgroundColor: '#FFFFFF', borderRadius: 20, padding: 10, elevation: 10, maxHeight: '70%' }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 15, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' }}>
-                <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#03045E' }}>Pilih Negeri</Text>
+                <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#03045E' }}>{t('filter_select_state')}</Text>
                 <TouchableOpacity onPress={() => setShowPicker(false)}>
                   <Ionicons name="close-circle" size={26} color="#94A3B8" />
                 </TouchableOpacity>
@@ -283,7 +348,7 @@ export default function UserMainPage() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8FAFC' },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 25, paddingTop: 10, paddingBottom: 15 },
-  headerTitle: { fontSize: 32, fontWeight: '900', color: '#03045E', letterSpacing: 0.5 },
+  headerTitle: { fontSize: 26, fontWeight: '900', color: '#03045E', letterSpacing: 0.5, marginRight: 10, },
   headerIcons: { flexDirection: 'row', alignItems: 'center' },
   profileImage: { width: 45, height: 45, borderRadius: 25, borderWidth: 2, borderColor: '#0077B6' },
   

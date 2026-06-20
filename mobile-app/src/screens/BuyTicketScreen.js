@@ -14,7 +14,11 @@ import { getAuth } from 'firebase/auth';
 import { collection, query, where, getDocs, addDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../firebaseConfig'; 
 
+// 引入翻译钩子
+import { useTranslation } from 'react-i18next';
+
 export default function BuyTicketScreen() {
+  const { t, i18n } = useTranslation(); // 激活全局翻译
   const router = useRouter();
   const { id } = useLocalSearchParams(); 
   
@@ -23,8 +27,6 @@ export default function BuyTicketScreen() {
   
   const [isWarganegara, setIsWarganegara] = useState(true);
   const [ticketCounts, setTicketCounts] = useState({ adult: 0, child: 0, senior: 0, oku: 0 });
-  const [selectedDate, setSelectedDate] = useState('15 Mei 2026'); 
-
   const [selectedDateObj, setSelectedDateObj] = useState(new Date()); 
   const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
 
@@ -39,8 +41,17 @@ export default function BuyTicketScreen() {
   maxDate.setFullYear(today.getFullYear() + 1);
   maxDate.setHours(23, 59, 59, 999); 
 
-  const formatBulan = ["Januari", "Februari", "Mac", "April", "Mei", "Jun", "Julai", "Ogos", "September", "Oktober", "November", "Disember"];
-  const formattedDate = `${selectedDateObj.getDate()} ${formatBulan[selectedDateObj.getMonth()]} ${selectedDateObj.getFullYear()}`;
+  // 根据当前选择的语言，动态生成月份名称
+  const getFormattedDate = () => {
+    const isEng = i18n.language === 'en';
+    const formatBulanBM = ["Januari", "Februari", "Mac", "April", "Mei", "Jun", "Julai", "Ogos", "September", "Oktober", "November", "Disember"];
+    const formatBulanEN = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    
+    const monthArray = isEng ? formatBulanEN : formatBulanBM;
+    return `${selectedDateObj.getDate()} ${monthArray[selectedDateObj.getMonth()]} ${selectedDateObj.getFullYear()}`;
+  };
+
+  const formattedDate = getFormattedDate();
   
   useEffect(() => {
     if (id) {
@@ -54,7 +65,7 @@ export default function BuyTicketScreen() {
       const data = await getParkById(id);
       setPark(data);
     } catch (error) {
-      Alert.alert('Ralat', 'Gagal memuatkan data taman laut.');
+      Alert.alert(t('alert_error').replace(": ", ""), t('alert_park_load_fail'));
     } finally {
       setLoading(false);
     }
@@ -84,7 +95,7 @@ export default function BuyTicketScreen() {
   const toggleFavorite = async () => {
     const userId = auth.currentUser?.uid;
     if (!userId) {
-      Alert.alert("Perhatian", "Sila log masuk untuk menggunakan fungsi kegemaran.");
+      Alert.alert("Perhatian", t('alert_login_for_favorite'));
       return;
     }
 
@@ -106,7 +117,7 @@ export default function BuyTicketScreen() {
         setFavoriteId(docRef.id);
       }
     } catch (error) {
-      Alert.alert("Ralat", "Gagal mengemaskini kegemaran.");
+      Alert.alert(t('alert_error').replace(": ", ""), t('alert_favorite_fail'));
       console.log("Favorite Error:", error.message);
     }
   };
@@ -142,7 +153,7 @@ export default function BuyTicketScreen() {
   const handleCheckout = () => {
     const total = calculateTotal();
     if (total === 0) {
-      Alert.alert('Perhatian', 'Sila pilih sekurang-kurangnya 1 tiket.');
+      Alert.alert('Perhatian', t('alert_select_ticket'));
       return;
     }
 
@@ -166,17 +177,11 @@ export default function BuyTicketScreen() {
   
   const handleConfirmDate = (date) => {
     if (date.getTime() > maxDate.getTime()) {
-      Alert.alert(
-        "Tarikh Tidak Sah", 
-        "Anda hanya boleh menempah tiket untuk tempoh maksimum satu tahun dari hari ini."
-      );
+      Alert.alert(t('alert_date_invalid'), t('alert_date_max_error'));
       setSelectedDateObj(maxDate); 
     } 
     else if (date.getTime() < today.getTime()) {
-      Alert.alert(
-        "Tarikh Tidak Sah", 
-        "Sila pilih tarikh bermula dari hari ini."
-      );
+      Alert.alert(t('alert_date_invalid'), t('alert_date_past_error'));
       setSelectedDateObj(today); 
     } 
     else {
@@ -190,7 +195,7 @@ export default function BuyTicketScreen() {
     return (
       <SafeAreaView style={styles.centerContainer}>
         <ActivityIndicator size="large" color="#0077B6" />
-        <Text style={{ marginTop: 15, color: '#0077B6', fontWeight: 'bold' }}>Memuatkan tiket...</Text>
+        <Text style={{ marginTop: 15, color: '#0077B6', fontWeight: 'bold' }}>{t('msg_loading_ticket')}</Text>
       </SafeAreaView>
     );
   }
@@ -198,9 +203,9 @@ export default function BuyTicketScreen() {
   if (!park) {
     return (
       <SafeAreaView style={styles.centerContainer}>
-        <Text style={{color: '#94A3B8'}}>Taman Laut tidak dijumpai.</Text>
+        <Text style={{color: '#94A3B8'}}>{t('msg_park_not_found')}</Text>
         <TouchableOpacity onPress={() => router.back()} style={{marginTop: 20}}>
-          <Text style={{color: '#0077B6', fontWeight: 'bold'}}>Kembali</Text>
+          <Text style={{color: '#0077B6', fontWeight: 'bold'}}>{t('btn_back')}</Text>
         </TouchableOpacity>
       </SafeAreaView>
     );
@@ -240,7 +245,7 @@ export default function BuyTicketScreen() {
             <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
               <Ionicons name="chevron-back" size={28} color="#FFFFFF" />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Tempahan Tiket</Text>
+            <Text style={styles.headerTitle}>{t('header_ticket_booking')}</Text>
             <View style={{ width: 28 }} /> 
           </View>
 
@@ -263,7 +268,7 @@ export default function BuyTicketScreen() {
 
               <View style={styles.ticketBody}>
                 
-                <Text style={styles.sectionTitle}>Tarikh Lawatan</Text>
+                <Text style={styles.sectionTitle}>{t('title_visit_date')}</Text>
                 <TouchableOpacity style={styles.dateSelector} onPress={showDatePicker}>
                   <Ionicons name="calendar-outline" size={20} color="#0077B6" />
                   <Text style={styles.dateText}>{formattedDate}</Text>
@@ -283,12 +288,12 @@ export default function BuyTicketScreen() {
                   pickerComponentStyleIOS={styles.iosPickerStyle}
                 />
 
-                <Text style={styles.sectionTitle}>Lokasi Taman Laut</Text>
+                <Text style={styles.sectionTitle}>{t('title_park_location')}</Text>
                 <View style={styles.mapCard}>
                   <View style={styles.addressBox}>
                     <Ionicons name="location-sharp" size={16} color="#0077B6" />
                     <Text style={styles.addressText} numberOfLines={2}>
-                      {park.address || "Sila rujuk peta di bawah untuk lokasi"}
+                      {park.address || t('map_default_address')}
                     </Text>
                   </View>
                   
@@ -317,31 +322,31 @@ export default function BuyTicketScreen() {
                   </View>
                 </View>
 
-                <Text style={styles.sectionTitle}>Kategori Pengunjung</Text>
+                <Text style={styles.sectionTitle}>{t('title_visitor_category')}</Text>
                 <View style={styles.toggleContainer}>
                   <TouchableOpacity 
                     style={[styles.toggleBtn, isWarganegara && styles.toggleBtnActive]} 
                     onPress={() => handleCategoryChange(true)}
                   >
-                    <Text style={[styles.toggleText, isWarganegara && styles.toggleTextActive]}>Warganegara</Text>
+                    <Text style={[styles.toggleText, isWarganegara && styles.toggleTextActive]}>{t('btn_citizen')}</Text>
                   </TouchableOpacity>
                   
                   <TouchableOpacity 
                     style={[styles.toggleBtn, !isWarganegara && styles.toggleBtnActive]} 
                     onPress={() => handleCategoryChange(false)}
                   >
-                    <Text style={[styles.toggleText, !isWarganegara && styles.toggleTextActive]}>Bukan Warganegara</Text>
+                    <Text style={[styles.toggleText, !isWarganegara && styles.toggleTextActive]}>{t('btn_non_citizen')}</Text>
                   </TouchableOpacity>
                 </View>
 
-                <Text style={styles.sectionTitle}>Kuantiti Tiket</Text>
-                <TicketCounter label="Dewasa" type="adult" price={currentPrices.adult} />
+                <Text style={styles.sectionTitle}>{t('title_ticket_quantity')}</Text>
+                <TicketCounter label={t('label_adult')} type="adult" price={currentPrices.adult} />
                 <View style={styles.divider} />
-                <TicketCounter label="Kanak-kanak" type="child" price={currentPrices.child} />
+                <TicketCounter label={t('label_child')} type="child" price={currentPrices.child} />
                 <View style={styles.divider} />
-                <TicketCounter label="Warga Emas" type="senior" price={currentPrices.senior} />
+                <TicketCounter label={t('label_senior')} type="senior" price={currentPrices.senior} />
                 <View style={styles.divider} />
-                <TicketCounter label="OKU" type="oku" price={currentPrices.oku} />
+                <TicketCounter label={t('label_oku')} type="oku" price={currentPrices.oku} />
 
               </View>
             </View>
@@ -361,7 +366,7 @@ export default function BuyTicketScreen() {
             </TouchableOpacity>
 
             <View style={{ flex: 1, marginLeft: 15 }}>
-              <Text style={styles.totalLabel}>Jumlah Bayaran</Text>
+              <Text style={styles.totalLabel}>{t('label_total_payment')}</Text>
               <Text style={styles.totalPrice}>RM {totalPrice.toFixed(2)}</Text>
             </View>
 
@@ -370,7 +375,7 @@ export default function BuyTicketScreen() {
               onPress={handleCheckout} 
               disabled={totalPrice === 0}
             >
-              <Text style={styles.checkoutBtnText}>Semak Keluar</Text>
+              <Text style={styles.checkoutBtnText}>{t('btn_checkout')}</Text>
             </TouchableOpacity>
           </View>
 

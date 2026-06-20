@@ -15,10 +15,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { registerUser } from '../services/AuthService';
+import { useTranslation } from 'react-i18next';
+import LanguageToggle from '../components/LanguageToggle';
 
 const MARINE_LOGO = require('../../assets/marinepark-logo.png');
 
 export default function RegisterScreen() {
+  const { t } = useTranslation();
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -30,15 +33,23 @@ export default function RegisterScreen() {
 
   const handleRegister = async () => {
     if (!username || !email || !password || !confirmPassword) {
-      alert("Sila isi semua maklumat.");
+      alert(t('alert_fill_all'));
+      return;
+    }
+    if (username.trim().length < 3) {
+      alert(t('alert_username_short'));
       return;
     }
     if (!email.toLowerCase().endsWith('@gmail.com')) {
-      alert("Sila gunakan e-mel yang berakhir dengan @gmail.com.");
+      alert(t('alert_invalid_email'));
+      return;
+    }
+    if (password.length < 6) {
+      alert(t('alert_password_short'));
       return;
     }
     if (password !== confirmPassword) {
-      alert("Kata laluan tidak sepadan!");
+      alert(t('alert_password_mismatch'));
       return;
     }
 
@@ -46,17 +57,17 @@ export default function RegisterScreen() {
     try {
       await registerUser(email, password, username);
       
-      alert("Pendaftaran Berjaya!");
+      alert(t('alert_register_success'));
       router.replace('/login');
     } catch (error) {
       console.log("Daftar Gagal:", error.code, error.message);
       
       if (error.code === 'auth/email-already-in-use') {
-        alert("E-mel ini telah pun didaftarkan! Sila pergi ke halaman Log Masuk.");
+        alert(t('alert_email_in_use'));
       } else if (error.code === 'auth/weak-password') {
-        alert("Kata laluan terlalu lemah. Sila gunakan sekurang-kurangnya 6 aksara.");
+        alert(t('alert_weak_password'));
       } else {
-        alert("Ralat Pendaftaran: " + error.message);
+        alert(t('alert_register_error') + error.message);
       }
       
     } finally {
@@ -66,62 +77,65 @@ export default function RegisterScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      
+      <View style={styles.toggleWrapper}>
+        <LanguageToggle />
+      </View>
+
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1 }}
       >
         <ScrollView contentContainerStyle={styles.scrollCenter} showsVerticalScrollIndicator={false}>
           
-          {/* ================= Header Section ================= */}
           <View style={styles.headerContainer}>
             <Image 
               source={MARINE_LOGO}
               style={styles.logoImage} 
             />
-            <Text style={styles.title}>Daftar Akaun</Text>
-            <Text style={styles.subtitle}>Sistem e-Tiket Taman Laut</Text>
+            <Text style={styles.title}>{t('register_title')}</Text>
+            <Text style={styles.subtitle}>{t('system_subtitle')}</Text>
           </View>
 
-          {/* ================= Register Form Card ================= */}
           <View style={styles.formContainer}>
             
-            {/* 1. Username Input Field */}
             <View style={styles.inputField}>
               <Ionicons name="person-outline" size={20} color="#0077B6" style={styles.leftIcon} />
               <TextInput
                 style={styles.inputText}
-                placeholder="Nama Pengguna"
+                placeholder={t('username_placeholder')}
                 placeholderTextColor="#90A4AE"
                 value={username}
                 onChangeText={setUsername}
                 autoCapitalize="words"
+                maxLength={30}
               />
             </View>
 
-            {/* 2. Email Input Field */}
             <View style={styles.inputField}>
               <Ionicons name="mail-outline" size={20} color="#0077B6" style={styles.leftIcon} />
               <TextInput
                 style={styles.inputText}
-                placeholder="E-mel"
+                placeholder={t('email_placeholder')} // 重用 Login 里的字典
                 placeholderTextColor="#90A4AE"
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
                 autoCapitalize="none"
+                maxLength={50}
               />
             </View>
 
-            {/* 3. Password Input Field */}
             <View style={styles.inputField}>
               <Ionicons name="lock-closed-outline" size={20} color="#0077B6" style={styles.leftIcon} />
               <TextInput
                 style={styles.passwordInput}
-                placeholder="Kata Laluan"
+                placeholder={t('password_placeholder')} // 重用 Login 里的字典
                 placeholderTextColor="#90A4AE"
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry={!showPassword}
+                maxLength={30}
               />
               <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
                 <Ionicons
@@ -132,16 +146,16 @@ export default function RegisterScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* 4. Confirm Password Input Field */}
             <View style={styles.inputField}>
               <Ionicons name="lock-closed-outline" size={20} color="#0077B6" style={styles.leftIcon} />
               <TextInput
                 style={styles.passwordInput}
-                placeholder="Sahkan Kata Laluan"
+                placeholder={t('confirm_password_placeholder')}
                 placeholderTextColor="#90A4AE"
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
                 secureTextEntry={!showConfirmPassword}
+                maxLength={30}
               />
               <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)} style={styles.eyeIcon}>
                 <Ionicons
@@ -152,7 +166,6 @@ export default function RegisterScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* Primary Register Action */}
             <TouchableOpacity 
               style={styles.mainButton} 
               onPress={handleRegister}
@@ -161,16 +174,14 @@ export default function RegisterScreen() {
               {isLoading ? (
                 <ActivityIndicator size="small" color="#FFFFFF" />
               ) : (
-                <Text style={styles.mainButtonText}>Daftar Akaun</Text>
+                <Text style={styles.mainButtonText}>{t('register_button')}</Text>
               )}
             </TouchableOpacity>
 
-            {/* Navigate back to Login */}
             <View style={styles.footer}>
-              <Text style={styles.footerText}>Sudah ada akaun? </Text>
-              {/* This router.back() safely returns the user to the Login page */}
+              <Text style={styles.footerText}>{t('already_have_account')} </Text>
               <TouchableOpacity onPress={() => router.back()}>
-                <Text style={styles.linkText}>Log masuk</Text>
+                <Text style={styles.linkText}>{t('login_link')}</Text>
               </TouchableOpacity>
             </View>
 
@@ -185,6 +196,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#CAF0F8', 
+  },
+  toggleWrapper: {
+    alignItems: 'flex-end',
+    paddingHorizontal: 25,
+    paddingTop: 10,
+    zIndex: 10, 
   },
   scrollCenter: {
     flexGrow: 1,

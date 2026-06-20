@@ -10,8 +10,10 @@ import { getAuth } from 'firebase/auth';
 import { collection, query, where, getDocs, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../../firebaseConfig'; 
 import MaintenanceOverlay from '../components/MaintenanceOverlay';
+import { useTranslation } from 'react-i18next';
 
 export default function FavoriteScreen() {
+  const { t } = useTranslation(); // 自动继承全局语言
   const router = useRouter();
   const auth = getAuth();
   
@@ -52,19 +54,19 @@ export default function FavoriteScreen() {
 
   const handleRemoveFavorite = async (docId, parkName) => {
     Alert.alert(
-      "Buang dari Kegemaran",
-      `Adakah anda pasti ingin membuang ${parkName} dari senarai kegemaran?`,
+      t('alert_remove_fav_title'),
+      `${t('alert_remove_fav_desc_1')}${parkName}${t('alert_remove_fav_desc_2')}`,
       [
-        { text: "Batal", style: "cancel" },
+        { text: t('btn_cancel'), style: "cancel" },
         { 
-          text: "Buang", 
+          text: t('btn_remove'), 
           style: "destructive",
           onPress: async () => {
             try {
               await deleteDoc(doc(db, "favorites", docId));
               setFavorites(prev => prev.filter(item => item.docId !== docId));
             } catch (error) {
-              Alert.alert("Ralat", "Gagal membuang kegemaran.");
+              Alert.alert(t('alert_error').replace(": ", ""), t('alert_remove_fav_fail'));
             }
           }
         }
@@ -105,7 +107,7 @@ export default function FavoriteScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="chevron-back" size={28} color="#03045E" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Kegemaran Saya</Text>
+        <Text style={styles.headerTitle}>{t('header_my_favorites')}</Text>
         <View style={styles.rightPlaceholder} /> 
       </View>
 
@@ -113,15 +115,15 @@ export default function FavoriteScreen() {
       {loading ? (
         <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color="#0077B6" />
-          <Text style={styles.loadingText}>Memuatkan kegemaran...</Text>
+          <Text style={styles.loadingText}>{t('msg_loading_favorites')}</Text>
         </View>
       ) : favorites.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Ionicons name="heart-dislike-outline" size={80} color="#CBD5E1" />
-          <Text style={styles.emptyTitle}>Tiada Kegemaran</Text>
-          <Text style={styles.emptySubtitle}>Anda belum menambah mana-mana taman laut ke dalam senarai kegemaran anda.</Text>
+          <Text style={styles.emptyTitle}>{t('empty_fav_title')}</Text>
+          <Text style={styles.emptySubtitle}>{t('empty_fav_subtitle')}</Text>
           <TouchableOpacity style={styles.exploreBtn} onPress={() => router.replace('/usermainpage')}>
-            <Text style={styles.exploreBtnText}>Teroka Taman Laut</Text>
+            <Text style={styles.exploreBtnText}>{t('btn_explore_parks')}</Text>
           </TouchableOpacity>
         </View>
       ) : (

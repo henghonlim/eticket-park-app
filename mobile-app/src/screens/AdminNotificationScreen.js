@@ -119,7 +119,6 @@ export default function AdminNotificationScreen() {
     setLoading(true);
 
     try {
-      // 路径：system 集合 -> settings 文档
       const docRef = doc(db, "system", "settings");
       const settingsSnap = await getDoc(docRef);
       
@@ -129,7 +128,6 @@ export default function AdminNotificationScreen() {
       if (settingsSnap.exists()) {
         const resData = settingsSnap.data();
         
-        // 🌟 核心修正：顺着 templates 树状结构往里找 weather
         if (resData.templates && resData.templates.weather) {
           const template = resData.templates.weather;
           if (template.title) defaultTitle = template.title;
@@ -137,11 +135,9 @@ export default function AdminNotificationScreen() {
         }
       }
 
-      // 在打开编辑器时，提前把 [Taman] 标签替换成当前的真实公园名字
       defaultTitle = defaultTitle.replace(/\[Taman\]/g, selectedPark.name);
       defaultBody = defaultBody.replace(/\[Taman\]/g, selectedPark.name);
 
-      // [Nama] 保持原样留在输入框里，留给第二步群发时多线程动态替换
       setAnnounceTitle(defaultTitle);
       setAnnounceBody(defaultBody);
       setIsAnnounceModalVisible(true);
@@ -240,7 +236,6 @@ export default function AdminNotificationScreen() {
     );
   }
 
-  // 🌟 1. 所有的变量和逻辑计算，整整齐齐排在 return 上面
   const currentWeatherState = weatherData ? getWeatherInfo(weatherData.weather_code, weatherData.is_day) : null;
   const currentWindSpeed = weatherData ? weatherData.wind_speed_10m : 0;
   const badWeatherHours = hourlyForecast.slice(0, 24).filter(item => item.code >= 50);
@@ -259,7 +254,6 @@ export default function AdminNotificationScreen() {
       
       <AdminHeader title="Modul Amaran" subtitle="Penyebaran Notifikasi & Cuaca" />
 
-      {/* 顶级双 Tab 开关 */}
       <View style={styles.topTabContainer}>
         <TouchableOpacity style={[styles.topTabBtn, activeTab === 'weather' && styles.topTabBtnActive]} onPress={() => setActiveTab('weather')}>
           <MaterialCommunityIcons name="weather-partly-lightning" size={18} color={activeTab === 'weather' ? "#FFF" : "#64748B"} />
@@ -271,7 +265,6 @@ export default function AdminNotificationScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* ================= TAB 1: WEATHER FORECAST (完美克隆用户端 + 广播功能) ================= */}
       {activeTab === 'weather' ? (
         <View style={{ flex: 1 }}>
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
@@ -295,7 +288,6 @@ export default function AdminNotificationScreen() {
               <Text style={styles.feelsLikeText}>Terasa seperti {Math.round(weatherData.apparent_temperature)}°C</Text>
             </View>
 
-            {/* 🌟 刚才那个大括号 UI 块应该安放在这里！ */}
             {currentWeatherState?.badWeather ? (
               <View style={[styles.alertBox, { backgroundColor: '#F8FAFC', borderColor: '#CBD5E1' }]}>
                 <MaterialCommunityIcons name={currentWeatherState.icon} size={24} color={currentWeatherState.color} style={{ marginRight: 15 }} />
@@ -321,7 +313,6 @@ export default function AdminNotificationScreen() {
                   <View style={styles.gridItem}><MaterialCommunityIcons name="weather-rainy" size={24} color="#3B82F6" /><Text style={styles.gridValue}>{weatherData.precipitation} mm</Text><Text style={styles.gridLabel}>Kerpasan Hujan</Text></View>
                 </View>
 
-                {/* 周期趋势预测 */}
                 <View style={styles.forecastContainer}>
                   <View style={styles.forecastTabs}>
                     <TouchableOpacity style={[styles.forecastTab, forecastTab === 'hourly' && styles.forecastTabActive]} onPress={() => setForecastTab('hourly')}>
@@ -363,21 +354,18 @@ export default function AdminNotificationScreen() {
             ) : null}
           </ScrollView>
 
-          {/* 左下角闪电级超级广播按钮 */}
           <TouchableOpacity 
             style={styles.fabAnnouncementButton} 
-            onPress={handleOpenAnnouncementEditor} // 🌟 改成这个函数名来打开编辑器
+            onPress={handleOpenAnnouncementEditor}
           >
             <Ionicons name="flash" size={20} color="#FFFFFF" />
             <Text style={styles.fabButtonText}>Cipta Pengumuman</Text>
           </TouchableOpacity>
         </View>
       ) : (
-        /* ================= TAB 2: PARK CLOSURE (留出空白接口以备后续拓展) ================= */
         <AdminClosureTab parks={parks} />
       )}
 
-      {/* 公园单选弹窗（对齐用户端） */}
       <Modal visible={showPicker} transparent={true} animationType="fade">
         <TouchableWithoutFeedback onPress={() => setShowPicker(false)}>
           <View style={styles.modalOverlay}>
@@ -398,7 +386,6 @@ export default function AdminNotificationScreen() {
         </TouchableWithoutFeedback>
       </Modal>
 
-      {/* 管理端统一样式底部全局导航条 */}
       <View style={styles.bottomTabBar}>
         <TouchableOpacity style={styles.tabItem} onPress={() => router.replace('/admindashboard')}>
           <Ionicons name="grid-outline" size={24} color="#90A4AE" /><Text style={styles.tabText}>Utama</Text>
@@ -492,7 +479,6 @@ export default function AdminNotificationScreen() {
   );
 }
 
-// ================= Styles 样式组 (100% 对齐你的 Admin UI 风格) =================
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8FAFC' },
   centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F8FAFC', paddingHorizontal: 30 },
@@ -501,7 +487,6 @@ const styles = StyleSheet.create({
   headerSubtitle: { fontSize: 14, color: '#0077B6', fontWeight: '600', marginTop: 1 },
   profileImage: { width: 45, height: 45, borderRadius: 25, borderWidth: 2, borderColor: '#03045E' },
   
-  // 顶级双 Tab 选择条样式
   topTabContainer: { flexDirection: 'row', backgroundColor: '#E2E8F0', marginHorizontal: 25, borderRadius: 12, padding: 4, marginBottom: 15 },
   topTabBtn: { flex: 1, flexDirection: 'row', paddingVertical: 12, justifyContent: 'center', alignItems: 'center', borderRadius: 10 },
   topTabBtnActive: { backgroundColor: '#03045E' },
@@ -552,12 +537,11 @@ const styles = StyleSheet.create({
   modalTitle: { fontSize: 17, fontWeight: 'bold', color: '#03045E', padding: 15, textAlign: 'center', borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
   dropdownItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 20, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
 
-  // 🌟 左下角悬浮广播特种按钮
   fabAnnouncementButton: { 
     position: 'absolute', 
     bottom: 115, 
     left: 25, 
-    backgroundColor: '#D62828', // 采用亮红色警示底色
+    backgroundColor: '#D62828',
     flexDirection: 'row', 
     paddingVertical: 14, 
     paddingHorizontal: 20, 
@@ -572,7 +556,6 @@ const styles = StyleSheet.create({
   fabButtonText: { color: '#FFFFFF', fontSize: 14, fontWeight: 'bold', marginLeft: 6 },
   dummyExpandBtn: { backgroundColor: '#03045E', paddingHorizontal: 30, paddingVertical: 12, borderRadius: 12, marginTop: 25 },
 
-  // 底层主导航栏
   bottomTabBar: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 95, backgroundColor: '#FFFFFF', flexDirection: 'row', justifyContent: 'space-evenly', alignItems: 'flex-start', paddingBottom: 20, paddingTop: 10, borderTopLeftRadius: 30, borderTopRightRadius: 30, shadowColor: '#000', shadowOffset: { width: 0, height: -5 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 10 },
   tabItem: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   tabText: { fontSize: 12, color: '#90A4AE', marginTop: 6, fontWeight: '500', textAlign: 'center' },

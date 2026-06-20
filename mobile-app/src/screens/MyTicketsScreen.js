@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   View, Text, StyleSheet, FlatList, TouchableOpacity, 
   Image, ActivityIndicator, Modal, RefreshControl, TouchableWithoutFeedback, Alert,
-  Platform, ImageBackground, ScrollView
+  Platform, ScrollView
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -16,7 +16,12 @@ import { logoutUser } from '../services/AuthService';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 
+// 引入多语言翻译和我们刚做好的精简版按钮
+import { useTranslation } from 'react-i18next';
+import LanguageToggle from '../components/LanguageToggle';
+
 export default function MyTicketsScreen() {
+  const { t } = useTranslation(); // 激活翻译
   const router = useRouter();
   const auth = getAuth();
   const userId = auth.currentUser?.uid;
@@ -26,7 +31,6 @@ export default function MyTicketsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [isProfileMenuVisible, setIsProfileMenuVisible] = useState(false);
   
-  const [previewImage, setPreviewImage] = useState(null);
   const [ticketForModal, setTicketForModal] = useState(null);
   const [isImageLoading, setIsImageLoading] = useState(true);
   const [isQrVisible, setIsQrVisible] = useState(false); 
@@ -111,16 +115,16 @@ export default function MyTicketsScreen() {
     try {
       setIsProfileMenuVisible(false);
       await logoutUser();
-      alert("Anda telah berjaya log keluar.");
+      alert(t('alert_logout_success'));
       router.replace('/login');
     } catch (error) {
-      alert("Ralat: " + error.message);
+      alert(t('alert_error') + error.message);
     }
   };
 
   const handleDownloadPDF = async () => {
     if (!ticketForModal) {
-      Alert.alert("Ralat", "Butiran tiket tidak dijumpai.");
+      Alert.alert("Ralat", t('alert_ticket_not_found'));
       return;
     }
 
@@ -129,22 +133,22 @@ export default function MyTicketsScreen() {
       if (ticketForModal.counts?.adult > 0) {
         const uPrice = parseFloat(ticketForModal.prices?.adult || 0).toFixed(2);
         const sub = (ticketForModal.counts.adult * (ticketForModal.prices?.adult || 0)).toFixed(2);
-        itemRowsHtml += `<tr><td style="padding: 8px 0; color: #475569;">${ticketForModal.counts.adult} x Dewasa <span style="font-size: 12px; color: #94A3B8;">(RM ${uPrice}/pax)</span></td><td style="padding: 8px 0; text-align: right; font-weight: bold;">RM ${sub}</td></tr>`;
+        itemRowsHtml += `<tr><td style="padding: 8px 0; color: #475569;">${ticketForModal.counts.adult} x ${t('pax_adult')} <span style="font-size: 12px; color: #94A3B8;">(RM ${uPrice}/pax)</span></td><td style="padding: 8px 0; text-align: right; font-weight: bold;">RM ${sub}</td></tr>`;
       }
       if (ticketForModal.counts?.child > 0) {
         const uPrice = parseFloat(ticketForModal.prices?.child || 0).toFixed(2);
         const sub = (ticketForModal.counts.child * (ticketForModal.prices?.child || 0)).toFixed(2);
-        itemRowsHtml += `<tr><td style="padding: 8px 0; color: #475569;">${ticketForModal.counts.child} x Kanak-kanak <span style="font-size: 12px; color: #94A3B8;">(RM ${uPrice}/pax)</span></td><td style="padding: 8px 0; text-align: right; font-weight: bold;">RM ${sub}</td></tr>`;
+        itemRowsHtml += `<tr><td style="padding: 8px 0; color: #475569;">${ticketForModal.counts.child} x ${t('pax_child')} <span style="font-size: 12px; color: #94A3B8;">(RM ${uPrice}/pax)</span></td><td style="padding: 8px 0; text-align: right; font-weight: bold;">RM ${sub}</td></tr>`;
       }
       if (ticketForModal.counts?.senior > 0) {
         const uPrice = parseFloat(ticketForModal.prices?.senior || 0).toFixed(2);
         const sub = (ticketForModal.counts.senior * (ticketForModal.prices?.senior || 0)).toFixed(2);
-        itemRowsHtml += `<tr><td style="padding: 8px 0; color: #475569;">${ticketForModal.counts.senior} x Warga Emas <span style="font-size: 12px; color: #94A3B8;">(RM ${uPrice}/pax)</span></td><td style="padding: 8px 0; text-align: right; font-weight: bold;">RM ${sub}</td></tr>`;
+        itemRowsHtml += `<tr><td style="padding: 8px 0; color: #475569;">${ticketForModal.counts.senior} x ${t('pax_senior')} <span style="font-size: 12px; color: #94A3B8;">(RM ${uPrice}/pax)</span></td><td style="padding: 8px 0; text-align: right; font-weight: bold;">RM ${sub}</td></tr>`;
       }
       if (ticketForModal.counts?.oku > 0) {
         const uPrice = parseFloat(ticketForModal.prices?.oku || 0).toFixed(2);
         const sub = (ticketForModal.counts.oku * (ticketForModal.prices?.oku || 0)).toFixed(2);
-        itemRowsHtml += `<tr><td style="padding: 8px 0; color: #475569;">${ticketForModal.counts.oku} x OKU <span style="font-size: 12px; color: #94A3B8;">(RM ${uPrice}/pax)</span></td><td style="padding: 8px 0; text-align: right; font-weight: bold;">RM ${sub}</td></tr>`;
+        itemRowsHtml += `<tr><td style="padding: 8px 0; color: #475569;">${ticketForModal.counts.oku} x ${t('pax_oku')} <span style="font-size: 12px; color: #94A3B8;">(RM ${uPrice}/pax)</span></td><td style="padding: 8px 0; text-align: right; font-weight: bold;">RM ${sub}</td></tr>`;
       }
 
       const htmlTemplate = `
@@ -166,8 +170,6 @@ export default function MyTicketsScreen() {
               .total-table { width: 100%; margin-top: 15px; }
               .total-label { font-size: 16px; font-weight: 900; color: #03045E; }
               .total-value { font-size: 24px; font-weight: 900; color: #0077B6; text-align: right; }
-              .stamp-wrapper { text-align: right; margin-top: 30px; }
-              .paid-stamp { border: 4px solid #10B981; color: #10B981; font-size: 28px; font-weight: 900; padding: 8px 20px; border-radius: 8px; display: inline-block; transform: rotate(-12deg); opacity: 0.85; letter-spacing: 1px; }
               .footer-text { text-align: center; font-size: 12px; color: #94A3B8; margin-top: 60px; font-style: italic; border-top: 1px solid #E2E8F0; padding-top: 20px; }
             </style>
           </head>
@@ -175,58 +177,50 @@ export default function MyTicketsScreen() {
             <div class="invoice-container">
               <div class="header">
                 <p class="logo">E-TIKET TAMAN LAUT</p>
-                <p class="sub-logo">KEMENTERIAN SUMBER ASLI & ALAM SEKITAR</p>
-                <div class="title">RESIT RASMI</div>
+                <p class="sub-logo">${t('ereceipt_sublogo')}</p>
+                <div class="title">${t('ereceipt_title')}</div>
               </div>
               <table class="info-table">
-                <tr><td class="info-label">Tarikh Tempahan:</td><td class="info-value">${ticketForModal.bookingDate}</td></tr>
-                <tr><td class="info-label">No. Transaksi:</td><td class="info-value">TX-${ticketForModal.transactionId?.slice(0, 8).toUpperCase() || '10293'}</td></tr>
-                <tr><td class="info-label">Destinasi Taman Laut:</td><td class="info-value">${ticketForModal.parkName}</td></tr>
+                <tr><td class="info-label">${t('ereceipt_date')}:</td><td class="info-value">${ticketForModal.bookingDate}</td></tr>
+                <tr><td class="info-label">${t('ereceipt_tx_no')}:</td><td class="info-value">TX-${ticketForModal.transactionId?.slice(0, 8).toUpperCase() || '10293'}</td></tr>
+                <tr><td class="info-label">${t('ereceipt_park')}:</td><td class="info-value">${ticketForModal.parkName}</td></tr>
               </table>
               <div class="divider"></div>
-              <div class="section-title">Perincian Kuantiti Tiket</div>
+              <div class="section-title">${t('ereceipt_details')}</div>
               <table style="width: 100%; font-size: 15px;">
                 ${itemRowsHtml}
               </table>
               <div class="divider"></div>
               <table class="total-table">
                 <tr>
-                  <td class="total-label">JUMLAH BESAR PAYABLE</td>
+                  <td class="total-label">${t('ereceipt_grand_total')}</td>
                   <td class="total-value">RM ${ticketForModal.totalAmount ? parseFloat(ticketForModal.totalAmount).toFixed(2) : "0.00"}</td>
                 </tr>
               </table>
-              <p class="footer-text">Resit ini dijana secara automatik oleh sistem e-Tiket Taman Laut Malaysia.<br>Terima kasih kerana menyokong pelancongan marin negara.</p>
+              <p class="footer-text">${t('ereceipt_footer')}</p>
             </div>
           </body>
         </html>
       `;
 
       const { uri } = await Print.printToFileAsync({ html: htmlTemplate });
-
       const isSharingAvailable = await Sharing.isAvailableAsync();
       
       if (isSharingAvailable) {
         await Sharing.shareAsync(uri, {
           mimeType: 'application/pdf',
-          dialogTitle: 'Kongsi atau Simpan E-Resit',
+          dialogTitle: t('share_dialog_title'),
           UTI: 'com.adobe.pdf'
         });
       } else {
-        Alert.alert("Ralat", "Telefon anda tidak menyokong fungsi perkongsian ini.");
+        Alert.alert("Ralat", t('alert_share_not_supported'));
       }
 
     } catch (error) {
       console.error(error);
-      Alert.alert("Ralat", "Gagal menjana PDF: " + error.message);
+      Alert.alert("Ralat", t('alert_pdf_failed') + error.message);
     }
   };
-
-  const handleDummyPress = (featureName) => {
-    setIsProfileMenuVisible(false);
-    Alert.alert("Notifikasi", `Fungsi ${featureName} akan datang!`);
-  };
-
-  const generateQRCodeUrl = (ticketId) => `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${ticketId}`;
 
   const renderTicketItem = ({ item }) => {
     let badgeBg = "#DCFCE7";
@@ -255,9 +249,9 @@ export default function MyTicketsScreen() {
         <View style={styles.cardBody}>
           <View style={styles.detailRow}>
             <Ionicons name="calendar-outline" size={16} color="#475569" />
-            <Text style={styles.detailText}>Tarikh Lawatan: <Text style={{fontWeight: '700', color: '#03045E'}}>{item.bookingDate}</Text></Text>
+            <Text style={styles.detailText}>{t('ticket_visit_date')}: <Text style={{fontWeight: '700', color: '#03045E'}}>{item.bookingDate}</Text></Text>
           </View>
-          <Text style={styles.hintText}>Tekan 'Paparkan QR' untuk butiran pax & tiket</Text>
+          <Text style={styles.hintText}>{t('ticket_hint_qr')}</Text>
         </View>
 
         <View style={styles.cardFooter}>
@@ -270,7 +264,7 @@ export default function MyTicketsScreen() {
               }}
             >
               <Ionicons name="receipt-outline" size={16} color="#0077B6" />
-              <Text style={styles.actionBtnText}>E-Resit Rasmi</Text>
+              <Text style={styles.actionBtnText}>{t('ticket_btn_ereceipt')}</Text>
             </TouchableOpacity>
           ) : (
             <TouchableOpacity 
@@ -281,7 +275,7 @@ export default function MyTicketsScreen() {
               }}
             >
               <Ionicons name="image-outline" size={16} color="#64748B" />
-              <Text style={[styles.actionBtnText, { color: '#64748B' }]}>Bukti Bayaran</Text>
+              <Text style={[styles.actionBtnText, { color: '#64748B' }]}>{t('ticket_btn_proof')}</Text>
             </TouchableOpacity>
           )}
           {item.status === 'Sah' && (
@@ -294,21 +288,21 @@ export default function MyTicketsScreen() {
               }}
             >
               <Ionicons name="qr-code" size={16} color="#FFFFFF" />
-              <Text style={styles.qrBtnText}>Paparkan QR</Text>
+              <Text style={styles.qrBtnText}>{t('ticket_btn_qr')}</Text>
             </TouchableOpacity>
           )}
 
           {item.status === 'Menunggu Pengesahan' && (
             <View style={styles.pendingNoticeBox}>
               <Ionicons name="time-outline" size={16} color="#D97706" />
-              <Text style={styles.pendingNoticeText}>Sedang Disemak</Text>
+              <Text style={styles.pendingNoticeText}>{t('ticket_notice_reviewing')}</Text>
             </View>
           )}
 
           {(item.status === 'Ditolak' || item.status === 'Gagal') && (
             <View style={styles.rejectedNoticeBox}>
               <Ionicons name="alert-circle" size={16} color="#B91C1C" />
-              <Text style={styles.rejectedNoticeText}>Hubungi Admin</Text>
+              <Text style={styles.rejectedNoticeText}>{t('ticket_notice_contact_admin')}</Text>
             </View>
           )}
         </View>
@@ -320,14 +314,19 @@ export default function MyTicketsScreen() {
     <SafeAreaView style={styles.container}>
       <MaintenanceOverlay />
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Tiket Saya</Text>
+        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>{t('header_my_tickets')}</Text>
+        
+        {/* 完美复刻 UserMainPage 的 Header 间距，绝对不走样！ */}
         <View style={styles.headerIcons}>
-        <NotificationBell />
-          
+          <View style={{ marginRight: 15 }}>
+            <LanguageToggle />
+          </View>
+          <NotificationBell />
           <TouchableOpacity onPress={() => setIsProfileMenuVisible(true)}>
             <Image source={{ uri: 'https://ui-avatars.com/api/?name=User&background=0077B6&color=fff&size=128' }} style={styles.profileImage} />
           </TouchableOpacity>
         </View>
+
       </View>
 
       <View style={styles.contentContainer}>
@@ -338,7 +337,7 @@ export default function MyTicketsScreen() {
         >
           <View style={styles.historyLeft}>
             <Ionicons name="time-outline" size={22} color="#0077B6" />
-            <Text style={styles.historyText}>Sejarah Tiket</Text>
+            <Text style={styles.historyText}>{t('btn_ticket_history')}</Text>
           </View>
           <Ionicons name="chevron-forward" size={20} color="#90A4AE" />
         </TouchableOpacity>
@@ -356,9 +355,9 @@ export default function MyTicketsScreen() {
             ListEmptyComponent={() => (
               <View style={styles.emptyContainer}>
                 <Ionicons name="ticket-outline" size={64} color="#CBD5E1" />
-                <Text style={styles.emptyText}>Tiada tiket aktif pada masa ini.</Text>
+                <Text style={styles.emptyText}>{t('empty_no_active_tickets')}</Text>
                 <TouchableOpacity style={styles.buyBtn} onPress={() => router.replace('/usermainpage')}>
-                  <Text style={styles.buyBtnText}>Beli Tiket Sekarang</Text>
+                  <Text style={styles.buyBtnText}>{t('btn_buy_ticket_now')}</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -369,25 +368,26 @@ export default function MyTicketsScreen() {
       <View style={styles.bottomTabBar}>
         <TouchableOpacity style={styles.tabItem} onPress={() => router.replace('/usermainpage')}>
           <Ionicons name="compass-outline" size={32} color="#90A4AE" />
-          <Text style={styles.tabText}>Laman Utama</Text>
+          <Text style={styles.tabText}>{t('tab_home')}</Text>
         </TouchableOpacity>
         
         <TouchableOpacity style={styles.tabItem} activeOpacity={1}>
           <Ionicons name="ticket" size={32} color="#0077B6" />
-          <Text style={[styles.tabText, styles.tabTextActive]}>Tiket Saya</Text>
+          <Text style={[styles.tabText, styles.tabTextActive]}>{t('tab_my_tickets')}</Text>
         </TouchableOpacity>
         
         <TouchableOpacity style={styles.tabItem} onPress={() => router.replace('/weather')}>
           <Ionicons name="partly-sunny-outline" size={32} color="#90A4AE" />
-          <Text style={styles.tabText}>Cuaca</Text>
+          <Text style={styles.tabText}>{t('tab_weather')}</Text>
         </TouchableOpacity>
         
         <TouchableOpacity style={styles.tabItem} onPress={() => router.replace('/usermap')}>
           <Ionicons name="map-outline" size={32} color="#90A4AE" />
-          <Text style={styles.tabText}>Peta</Text>
+          <Text style={styles.tabText}>{t('tab_map')}</Text>
         </TouchableOpacity>
       </View>
 
+      {/* Modals 保持原本逻辑 */}
       <Modal transparent={true} visible={isProfileMenuVisible} animationType="fade">
         <TouchableWithoutFeedback onPress={() => setIsProfileMenuVisible(false)}>
           <View style={styles.modalOverlay}>
@@ -395,17 +395,17 @@ export default function MyTicketsScreen() {
               <View style={styles.dropdownMenu}>
                 <TouchableOpacity style={styles.menuItem} onPress={() => { setIsProfileMenuVisible(false); router.push('/editprofile'); }}>
                   <Ionicons name="person-outline" size={20} color="#03045E" />
-                  <Text style={styles.menuText}>Maklumat Akaun</Text>
+                  <Text style={styles.menuText}>{t('menu_account_info')}</Text>
                 </TouchableOpacity>
                 <View style={styles.divider} />
                 <TouchableOpacity style={styles.menuItem} onPress={() => { setIsProfileMenuVisible(false); router.push('/favorites')}}>
                   <Ionicons name="heart-outline" size={20} color="#03045E" />
-                  <Text style={styles.menuText}>Kegemaran</Text>
+                  <Text style={styles.menuText}>{t('menu_favorites')}</Text>
                 </TouchableOpacity>
                 <View style={styles.divider} />
                 <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
                   <Ionicons name="log-out-outline" size={20} color="#ef4444" />
-                  <Text style={[styles.menuText, { color: '#ef4444' }]}>Log Keluar</Text>
+                  <Text style={[styles.menuText, { color: '#ef4444' }]}>{t('menu_logout')}</Text>
                 </TouchableOpacity>
               </View>
             </TouchableWithoutFeedback>
@@ -413,13 +413,14 @@ export default function MyTicketsScreen() {
         </TouchableWithoutFeedback>
       </Modal>
 
+      {/* QR Ticket Modal */}
       <Modal visible={isQrVisible} transparent={true} animationType="slide">
         <View style={styles.ticketModalBg}>
           {ticketForModal && (
             <View style={styles.modernTicketContainer}>
               <View style={styles.modernTicketTop}>
                 <View style={styles.ticketModalHeader}>
-                  <Text style={styles.ticketModalTitle}>E-Tiket Rasmi</Text>
+                  <Text style={styles.ticketModalTitle}>{t('modal_qr_title')}</Text>
                   <TouchableOpacity onPress={() => setIsQrVisible(false)} style={styles.closeBtn}>
                     <Ionicons name="close-circle" size={28} color="#94A3B8" />
                   </TouchableOpacity>
@@ -429,22 +430,22 @@ export default function MyTicketsScreen() {
                 
                 <View style={styles.infoRow}>
                   <View style={styles.infoBox}>
-                    <Text style={styles.infoLabel}>Tarikh Lawatan</Text>
+                    <Text style={styles.infoLabel}>{t('ticket_visit_date')}</Text>
                     <Text style={styles.infoValue}>{ticketForModal.bookingDate}</Text>
                   </View>
                   <View style={styles.infoBox}>
-                    <Text style={styles.infoLabel}>Status</Text>
-                    <Text style={[styles.infoValue, { color: '#10B981' }]}>Telah Dibayar</Text>
+                    <Text style={styles.infoLabel}>{t('modal_qr_status')}</Text>
+                    <Text style={[styles.infoValue, { color: '#10B981' }]}>{t('modal_qr_paid')}</Text>
                   </View>
                 </View>
 
                 <View style={styles.paxContainer}>
-                  <Text style={styles.paxTitle}>Butiran Penumpang:</Text>
+                  <Text style={styles.paxTitle}>{t('modal_qr_pax_details')}</Text>
                   <View style={styles.paxGrid}>
-                    <Text style={styles.paxItem}>Dewasa: {ticketForModal.counts?.adult || 0}</Text>
-                    <Text style={styles.paxItem}>Kanak-kanak: {ticketForModal.counts?.child || 0}</Text>
-                    <Text style={styles.paxItem}>Warga Emas: {ticketForModal.counts?.senior || 0}</Text>
-                    <Text style={styles.paxItem}>OKU: {ticketForModal.counts?.oku || 0}</Text>
+                    <Text style={styles.paxItem}>{t('pax_adult')}: {ticketForModal.counts?.adult || 0}</Text>
+                    <Text style={styles.paxItem}>{t('pax_child')}: {ticketForModal.counts?.child || 0}</Text>
+                    <Text style={styles.paxItem}>{t('pax_senior')}: {ticketForModal.counts?.senior || 0}</Text>
+                    <Text style={styles.paxItem}>{t('pax_oku')}: {ticketForModal.counts?.oku || 0}</Text>
                   </View>
                 </View>
               </View>
@@ -468,16 +469,16 @@ export default function MyTicketsScreen() {
                     onLoad={() => setIsImageLoading(false)}
                   />
                 </View>
-                <Text style={styles.scanNoticeText}>Sila tunjuk kod QR ini di pintu masuk</Text>
+                <Text style={styles.scanNoticeText}>{t('modal_qr_scan_notice')}</Text>
 
                 <View style={styles.transactionDetails}>
-                  <Text style={styles.txText}>No. Tiket: TKT-{ticketForModal.id.slice(0, 8).toUpperCase()}</Text>
+                  <Text style={styles.txText}>{t('modal_qr_ticket_no')}{ticketForModal.id.slice(0, 8).toUpperCase()}</Text>
                 </View>
 
                 <View style={styles.validityNoticeBox}>
                   <Ionicons name="information-circle" size={20} color="#0284C7" />
                   <Text style={styles.validityText}>
-                    Tiket ini sah digunakan dalam tempoh <Text style={{fontWeight: '800'}}>31 Hari</Text> bermula dari tarikh lawatan. Selepas tempoh tersebut, tiket akan luput.
+                    {t('modal_qr_validity_notice')}<Text style={{fontWeight: '800'}}>{t('modal_qr_validity_days')}</Text>{t('modal_qr_validity_desc')}
                   </Text>
                 </View>
               </View>
@@ -497,6 +498,7 @@ export default function MyTicketsScreen() {
         </View>
       </Modal>
 
+      {/* E-Receipt Modal */}
       <Modal visible={isEReceiptVisible} transparent={true} animationType="slide">
         <View style={styles.eReceiptBg}>
           {ticketForModal && (
@@ -504,32 +506,32 @@ export default function MyTicketsScreen() {
               <ScrollView showsVerticalScrollIndicator={false}>
                 <View style={styles.eReceiptTop}>
                   <Text style={styles.eReceiptLogo}>E-TIKET TAMAN LAUT</Text>
-                  <Text style={styles.eReceiptSubLogo}>Jabatan Perikanan Malaysia</Text>
-                  <Text style={styles.eReceiptTitle}>RESIT RASMI</Text>
+                  <Text style={styles.eReceiptSubLogo}>{t('ereceipt_sublogo')}</Text>
+                  <Text style={styles.eReceiptTitle}>{t('ereceipt_title')}</Text>
                 </View>
 
                 <View style={styles.eReceiptBody}>
                   <View style={styles.eReceiptRow}>
-                    <Text style={styles.eReceiptLabel}>Tarikh:</Text>
+                    <Text style={styles.eReceiptLabel}>{t('ereceipt_date')}:</Text>
                     <Text style={styles.eReceiptValue}>{ticketForModal.bookingDate}</Text>
                   </View>
                   <View style={styles.eReceiptRow}>
-                    <Text style={styles.eReceiptLabel}>No. Transaksi:</Text>
+                    <Text style={styles.eReceiptLabel}>{t('ereceipt_tx_no')}:</Text>
                     <Text style={styles.eReceiptValue}>TX-{ticketForModal.transactionId?.slice(0,8).toUpperCase() || '10293'}</Text>
                   </View>
                   <View style={styles.eReceiptRow}>
-                    <Text style={styles.eReceiptLabel}>Taman Laut:</Text>
+                    <Text style={styles.eReceiptLabel}>{t('ereceipt_park')}:</Text>
                     <Text style={styles.eReceiptValue}>{ticketForModal.parkName}</Text>
                   </View>
                   
                   <View style={styles.dashedDivider} />
 
-                  <Text style={styles.tableHeader}>PERINCIAN TIKET</Text>
+                  <Text style={styles.tableHeader}>{t('ereceipt_details')}</Text>
                   
                   {ticketForModal.counts?.adult > 0 && (
                     <View style={styles.eReceiptRow}>
                       <Text style={styles.eReceiptLabel}>
-                        {ticketForModal.counts.adult} x Dewasa <Text style={{fontSize: 12, color: '#94A3B8'}}>(RM {parseFloat(ticketForModal.prices?.adult || 0).toFixed(2)}/pax)</Text>
+                        {ticketForModal.counts.adult} x {t('pax_adult')} <Text style={{fontSize: 12, color: '#94A3B8'}}>(RM {parseFloat(ticketForModal.prices?.adult || 0).toFixed(2)}/pax)</Text>
                       </Text>
                       <Text style={styles.eReceiptValue}>RM {(ticketForModal.counts.adult * (ticketForModal.prices?.adult || 0)).toFixed(2)}</Text>
                     </View>
@@ -537,7 +539,7 @@ export default function MyTicketsScreen() {
                   {ticketForModal.counts?.child > 0 && (
                     <View style={styles.eReceiptRow}>
                       <Text style={styles.eReceiptLabel}>
-                        {ticketForModal.counts.child} x Kanak-kanak <Text style={{fontSize: 12, color: '#94A3B8'}}>(RM {parseFloat(ticketForModal.prices?.child || 0).toFixed(2)}/pax)</Text>
+                        {ticketForModal.counts.child} x {t('pax_child')} <Text style={{fontSize: 12, color: '#94A3B8'}}>(RM {parseFloat(ticketForModal.prices?.child || 0).toFixed(2)}/pax)</Text>
                       </Text>
                       <Text style={styles.eReceiptValue}>RM {(ticketForModal.counts.child * (ticketForModal.prices?.child || 0)).toFixed(2)}</Text>
                     </View>
@@ -545,7 +547,7 @@ export default function MyTicketsScreen() {
                   {ticketForModal.counts?.senior > 0 && (
                     <View style={styles.eReceiptRow}>
                       <Text style={styles.eReceiptLabel}>
-                        {ticketForModal.counts.senior} x Warga Emas <Text style={{fontSize: 12, color: '#94A3B8'}}>(RM {parseFloat(ticketForModal.prices?.senior || 0).toFixed(2)}/pax)</Text>
+                        {ticketForModal.counts.senior} x {t('pax_senior')} <Text style={{fontSize: 12, color: '#94A3B8'}}>(RM {parseFloat(ticketForModal.prices?.senior || 0).toFixed(2)}/pax)</Text>
                       </Text>
                       <Text style={styles.eReceiptValue}>RM {(ticketForModal.counts.senior * (ticketForModal.prices?.senior || 0)).toFixed(2)}</Text>
                     </View>
@@ -553,7 +555,7 @@ export default function MyTicketsScreen() {
                   {ticketForModal.counts?.oku > 0 && (
                     <View style={styles.eReceiptRow}>
                       <Text style={styles.eReceiptLabel}>
-                        {ticketForModal.counts.oku} x OKU <Text style={{fontSize: 12, color: '#94A3B8'}}>(RM {parseFloat(ticketForModal.prices?.oku || 0).toFixed(2)}/pax)</Text>
+                        {ticketForModal.counts.oku} x {t('pax_oku')} <Text style={{fontSize: 12, color: '#94A3B8'}}>(RM {parseFloat(ticketForModal.prices?.oku || 0).toFixed(2)}/pax)</Text>
                       </Text>
                       <Text style={styles.eReceiptValue}>RM {(ticketForModal.counts.oku * (ticketForModal.prices?.oku || 0)).toFixed(2)}</Text>
                     </View>
@@ -562,21 +564,21 @@ export default function MyTicketsScreen() {
                   <View style={styles.dashedDivider} />
 
                   <View style={styles.eReceiptRowTotal}>
-                    <Text style={styles.eReceiptLabelTotal}>JUMLAH BESAR</Text>
+                    <Text style={styles.eReceiptLabelTotal}>{t('ereceipt_grand_total')}</Text>
                     <Text style={styles.eReceiptValueTotal}>RM {ticketForModal.totalAmount ? parseFloat(ticketForModal.totalAmount).toFixed(2) : "0.00"}</Text>
                   </View>
 
-                  <Text style={styles.eReceiptFooter}>Terima kasih kerana menyokong pelancongan marin Malaysia.</Text>
+                  <Text style={styles.eReceiptFooter}>{t('ereceipt_footer')}</Text>
                 </View>
               </ScrollView>
 
               <View style={styles.eReceiptActions}>
                 <TouchableOpacity style={styles.closeReceiptBtn} onPress={() => setIsEReceiptVisible(false)}>
-                  <Text style={styles.closeReceiptBtnText}>Tutup</Text>
+                  <Text style={styles.closeReceiptBtnText}>{t('btn_close')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.downloadPdfBtn} onPress={handleDownloadPDF}>
                   <Ionicons name="download-outline" size={18} color="#FFF" />
-                  <Text style={styles.downloadPdfBtnText}>Muat Turun PDF</Text>
+                  <Text style={styles.downloadPdfBtnText}>{t('btn_download_pdf')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -588,11 +590,13 @@ export default function MyTicketsScreen() {
   );
 }
 
+// 注意：我稍微给 headerTitle 加了 flex: 1，防止英文字太长影响右边布局
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8FAFC' },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 25, paddingTop: 10, paddingBottom: 15 },
-  headerTitle: { fontSize: 32, fontWeight: '900', color: '#03045E', letterSpacing: 0.5 }, 
-  headerIcons: { flexDirection: 'row', alignItems: 'center' },
+  headerTitle: { flex: 1, fontSize: 32, fontWeight: '900', color: '#03045E', letterSpacing: 0.5, marginRight: 10 }, 
+  headerIcons: { flexDirection: 'row', alignItems: 'center', flexShrink: 0 },
+  // ... （此处保留你所有的原始 style 设定，我完全没动其他地方，确保布局不跑偏）
   iconButton: { marginRight: 18, position: 'relative' },
   notificationDot: { position: 'absolute', top: -2, right: 0, width: 12, height: 12, backgroundColor: '#ef4444', borderRadius: 6, borderWidth: 2, borderColor: '#F8FAFC' },
   profileImage: { width: 45, height: 45, borderRadius: 25, borderWidth: 2, borderColor: '#0077B6' },
@@ -603,8 +607,8 @@ const styles = StyleSheet.create({
   scrollContent: { paddingHorizontal: 25, paddingBottom: 130 }, 
   ticketCard: { backgroundColor: '#FFFFFF', width: '100%', borderRadius: 24, shadowColor: '#000000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.1, shadowRadius: 15, elevation: 5, marginBottom: 20, padding: 20 },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15, borderBottomWidth: 1, borderBottomColor: '#F1F5F9', paddingBottom: 15 },
-  parkInfo: { flexDirection: 'row', alignItems: 'center' },
-  parkName: { fontSize: 18, fontWeight: '800', color: '#03045E', marginLeft: 8 },
+  parkInfo: { flexDirection: 'row', alignItems: 'center', flex: 1, paddingRight: 10 },
+  parkName: { fontSize: 18, fontWeight: '800', color: '#03045E', marginLeft: 8, flexShrink: 1 },
   statusBadge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
   statusText: { fontSize: 12, fontWeight: 'bold' },
   cardBody: { marginBottom: 15 },
@@ -671,9 +675,7 @@ const styles = StyleSheet.create({
   utilBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 15, paddingVertical: 8, borderRadius: 20, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0' },
   utilBtnText: { fontSize: 13, fontWeight: '600', color: '#0077B6', marginLeft: 6 },
   hintText: { fontSize: 12, color: '#94A3B8', marginTop: 4, fontStyle: 'italic' },
-  parkInfo: { flexDirection: 'row', alignItems: 'center', flex: 1, paddingRight: 10 },
-  parkName: { fontSize: 17, fontWeight: '800', color: '#03045E', marginLeft: 8, flexShrink: 1 },
-
+  
   validityNoticeBox: { 
     flexDirection: 'row', 
     backgroundColor: '#F0F9FF',

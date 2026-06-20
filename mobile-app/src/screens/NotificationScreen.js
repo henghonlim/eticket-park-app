@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   View, Text, StyleSheet, TouchableOpacity, 
   FlatList, ActivityIndicator, Modal, TouchableWithoutFeedback,
-  Alert // 🌟 修复 1：补上了 Alert 导入
+  Alert
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,7 +12,11 @@ import { collection, query, where, orderBy, onSnapshot, doc, updateDoc, deleteDo
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import MaintenanceOverlay from '../components/MaintenanceOverlay';
 
+// 引入翻译钩子
+import { useTranslation } from 'react-i18next';
+
 export default function NotificationScreen() {
+  const { t } = useTranslation(); // 自动继承全局语言
   const router = useRouter();
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -35,7 +39,7 @@ export default function NotificationScreen() {
           setNotifications(notifData);
           setLoading(false);
         }, (error) => {
-          console.log("Berhenti mendengar notifikasi kerana user log keluar.", error.message);
+          console.log("Listen error:", error.message);
         });
       }
     });
@@ -65,12 +69,12 @@ export default function NotificationScreen() {
 
   const deleteNotification = (notifId) => {
     Alert.alert(
-      "Padam Notifikasi",
-      "Adakah anda pasti ingin memadam notifikasi ini?",
+      t('alert_delete_notif_title'),
+      t('alert_delete_notif_desc'),
       [
-        { text: "Batal", style: "cancel" },
+        { text: t('btn_cancel'), style: "cancel" },
         { 
-          text: "Padam", 
+          text: t('btn_delete'), 
           style: "destructive", 
           onPress: async () => {
             try {
@@ -88,12 +92,12 @@ export default function NotificationScreen() {
     if (notifications.length === 0) return;
     
     Alert.alert(
-      "Padam Semua",
-      "Adakah anda pasti ingin memadam semua notifikasi?",
+      t('alert_delete_all_title'),
+      t('alert_delete_all_desc'),
       [
-        { text: "Batal", style: "cancel" },
+        { text: t('btn_cancel'), style: "cancel" },
         { 
-          text: "Padam Semua", 
+          text: t('btn_delete_all'), 
           style: "destructive", 
           onPress: async () => {
             try {
@@ -159,12 +163,12 @@ export default function NotificationScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={24} color="#03045E" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Notifikasi</Text>
+        <Text style={styles.headerTitle}>{t('header_notifications')}</Text>
         <TouchableOpacity 
           onPress={clearAllNotifications} 
           style={{ width: 80, alignItems: 'flex-end' }}
         >
-          <Text style={{ color: '#EF4444', fontWeight: 'bold', fontSize: 13 }}>Padam Semua</Text>
+          <Text style={{ color: '#EF4444', fontWeight: 'bold', fontSize: 13 }}>{t('btn_delete_all')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -178,7 +182,7 @@ export default function NotificationScreen() {
           keyExtractor={(item) => item.id}
           renderItem={renderNotification}
           contentContainerStyle={styles.listContainer}
-          ListEmptyComponent={<Text style={styles.emptyText}>Tiada notifikasi.</Text>}
+          ListEmptyComponent={<Text style={styles.emptyText}>{t('empty_no_notifications')}</Text>}
         />
       )}
 
@@ -194,7 +198,7 @@ export default function NotificationScreen() {
                 <Text style={styles.modalBody}>{selectedNotif?.body}</Text>
                 
                 <TouchableOpacity style={styles.closeBtn} onPress={handleCloseModal}>
-                  <Text style={styles.closeBtnText}>Tutup</Text>
+                  <Text style={styles.closeBtnText}>{t('btn_close')}</Text>
                 </TouchableOpacity>
               </View>
             </TouchableWithoutFeedback>

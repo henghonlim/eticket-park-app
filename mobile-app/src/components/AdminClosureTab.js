@@ -14,11 +14,9 @@ export default function AdminClosureTab({ parks }) {
   const [loading, setLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
 
-  // 这里的输入框内容直接平铺在页面上
   const [announceTitle, setAnnounceTitle] = useState('');
   const [announceBody, setAnnounceBody] = useState('');
 
-  // 🌟 自动化联动：只要选中的公园发生改变，立刻去数据库拉取并刷新对应的模板内容
   useEffect(() => {
     const fetchClosureTemplate = async () => {
       if (!selectedPark) return;
@@ -39,7 +37,6 @@ export default function AdminClosureTab({ parks }) {
           }
         }
 
-        // 自动将 [Taman] 标签动态替换为当前所选公园名
         setAnnounceTitle(defaultTitle.replace(/\[Taman\]/g, selectedPark.name));
         setAnnounceBody(defaultBody.replace(/\[Taman\]/g, selectedPark.name));
       } catch (err) {
@@ -50,9 +47,8 @@ export default function AdminClosureTab({ parks }) {
     };
 
     fetchClosureTemplate();
-  }, [selectedPark]); // ⚡ 绑定 selectedPark，切换公园自动变色换字
+  }, [selectedPark]);
 
-  // 🌟 发送广播函数：直接读取当前屏幕输入框修改后的真实文字
   const handleSendAnnouncement = async () => {
     if (!announceTitle.trim() || !announceBody.trim()) {
       Alert.alert("Perhatian", "Tajuk dan kandungan mesej tidak boleh kosong.");
@@ -71,7 +67,6 @@ export default function AdminClosureTab({ parks }) {
             try {
               setIsSending(true);
 
-              // 1. 🌟 直接一把抓出全平台所有的注册用户数据
               const usersSnap = await getDocs(collection(db, "users"));
               
               if (usersSnap.empty) {
@@ -80,10 +75,8 @@ export default function AdminClosureTab({ parks }) {
                 return;
               }
 
-              // 2. 🌟 考虑到你的 FYP 毕业答辩加分项：Firestore Batch 写入单次上限是 500 条
-              // 为了绝对的安全和商业级性能，我们引入分块批处理（Chunked Batch）算法
               const allUsersDocs = usersSnap.docs;
-              const chunkSize = 400; // 每 400 条打包成一个 Batch 发送
+              const chunkSize = 400;
               let totalSent = 0;
 
               for (let i = 0; i < allUsersDocs.length; i += chunkSize) {
@@ -95,12 +88,10 @@ export default function AdminClosureTab({ parks }) {
                   const userData = userDoc.data();
 
                   if (userData.role === 'admin') {
-                    return; // 退出当前循环，继续检查下一个用户
+                    return;
                   }
-                  // 顺手直接从当前 document 抓取真实姓名，没有就 Fallback 变成 Pelawat
                   const fullName = userData.fullName || "Pelawat";
 
-                  // 分别替换每一个独立用户的 [Nama] 标签
                   let finalTitle = announceTitle.replace(/\[Nama\]/g, fullName);
                   let finalBody = announceBody.replace(/\[Nama\]/g, fullName);
 
@@ -109,14 +100,13 @@ export default function AdminClosureTab({ parks }) {
                     userId: uid,
                     title: finalTitle,
                     body: finalBody,
-                    type: 'closure', // 对应用户端红色警告图标
+                    type: 'closure',
                     isRead: false,
                     createdAt: serverTimestamp()
                   });
                   totalSent++;
                 });
 
-                // 正式提交这一个分段的 Batch
                 await batch.commit();
               }
 
@@ -145,20 +135,16 @@ export default function AdminClosureTab({ parks }) {
   };
 
   return (
-    // 🌟 1. 外层改回最纯净的 View，把复杂的避让交给 ScrollView 自己处理
     <View style={{ flex: 1 }}>
       
-      {/* 🌟 2. 这里的属性是魔法核心！ */}
       <ScrollView 
         showsVerticalScrollIndicator={false} 
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled" 
         
-        // 🚀 【核心大招】开启原生键盘安全域动态调整（系统会自动把聚焦的输入框死死推到键盘上方）
         automaticallyAdjustKeyboardInsets={true}
       >
         
-        {/* 1. 顶部选择公园栏 */}
         <Text style={styles.sectionLabel}>Pilih Taman Laut Yang Ingin Ditutup</Text>
         <TouchableOpacity style={styles.pickerBtn} onPress={() => setShowPicker(true)}>
           <Ionicons name="business" size={20} color="#D62828" />
@@ -166,7 +152,6 @@ export default function AdminClosureTab({ parks }) {
           <Ionicons name="chevron-down" size={20} color="#94A3B8" />
         </TouchableOpacity>
 
-        {/* 2. 保留的核心特色管控看板框 */}
         <View style={styles.monitorBox}>
           <MaterialCommunityIcons name="alert-octagon" size={36} color="#D62828" />
           <Text style={styles.monitorTitle}>Zon Kawalan Penutupan Taman</Text>
@@ -175,7 +160,6 @@ export default function AdminClosureTab({ parks }) {
           </Text>
         </View>
 
-        {/* 3. 核心编辑表单大厅 */}
         {loading ? (
           <ActivityIndicator size="large" color="#D62828" style={{ marginTop: 40 }} />
         ) : (
@@ -203,7 +187,6 @@ export default function AdminClosureTab({ parks }) {
               * Nota: Kekalkan kod <Text style={{fontWeight:'bold', color:'#D62828'}}>[Nama]</Text> jika mahu nama pelanggan diubah secara dinamik oleh sistem.
             </Text>
 
-            {/* 4. 终极广播发射按钮 */}
             <TouchableOpacity 
               style={[styles.btnSend, isSending && { backgroundColor: '#94A3B8' }]} 
               onPress={handleSendAnnouncement}
@@ -222,7 +205,6 @@ export default function AdminClosureTab({ parks }) {
         )}
       </ScrollView>
 
-      {/* 公园选择底盘弹出窗 */}
       <Modal visible={showPicker} transparent={true} animationType="fade">
         <TouchableWithoutFeedback onPress={() => setShowPicker(false)}>
           <View style={styles.modalOverlay}>
@@ -246,7 +228,6 @@ export default function AdminClosureTab({ parks }) {
   );
 }
 
-// ================= Styles 样式美装组 (无缝对接，更加紧凑高级) =================
 const styles = StyleSheet.create({
   content: { paddingHorizontal: 25, paddingTop: 15, paddingBottom: 95 },
   sectionLabel: { fontSize: 15, fontWeight: 'bold', color: '#64748B', marginBottom: 12 },

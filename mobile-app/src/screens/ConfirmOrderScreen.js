@@ -10,7 +10,11 @@ import MaintenanceOverlay from '../components/MaintenanceOverlay';
 import { db } from '../../firebaseConfig'; 
 import { doc, getDoc } from 'firebase/firestore';
 
+// 引入翻译钩子
+import { useTranslation } from 'react-i18next';
+
 export default function ConfirmOrderScreen() {
+  const { t } = useTranslation(); // 自动继承全局语言
   const router = useRouter();
   const params = useLocalSearchParams(); 
 
@@ -38,7 +42,7 @@ export default function ConfirmOrderScreen() {
           }
         }
       } catch (error) {
-        console.log("Gagal mendapatkan harga:", error.message);
+        console.log(t('log_fetch_price_fail'), error.message);
       }
     };
     fetchPrices();
@@ -46,7 +50,7 @@ export default function ConfirmOrderScreen() {
 
   const handleProceedToPayment = () => {
     if (!paymentMethod) {
-      Alert.alert("Perhatian", "Sila pilih kaedah pembayaran.");
+      Alert.alert(t('alert_attention'), t('alert_choose_payment'));
       return;
     }
 
@@ -73,7 +77,7 @@ export default function ConfirmOrderScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="chevron-back" size={28} color="#03045E" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Pengesahan Tempahan</Text>
+        <Text style={styles.headerTitle}>{t('header_confirm_order')}</Text>
         <View style={{ width: 28 }} />
       </View>
 
@@ -82,7 +86,7 @@ export default function ConfirmOrderScreen() {
         <View style={styles.receiptCard}>
           <View style={styles.receiptHeader}>
             <Ionicons name="receipt-outline" size={22} color="#0077B6" />
-            <Text style={styles.receiptTitle}>Butiran Pesanan</Text>
+            <Text style={styles.receiptTitle}>{t('title_order_details')}</Text>
           </View>
           
           <View style={styles.dashedDivider} />
@@ -91,7 +95,7 @@ export default function ConfirmOrderScreen() {
             <View style={styles.infoRow}>
               <View style={styles.infoIconBox}><Ionicons name="location" size={16} color="#0077B6" /></View>
               <View style={styles.infoTextContainer}>
-                <Text style={styles.infoLabel}>Taman Laut</Text>
+                <Text style={styles.infoLabel}>{t('label_marine_park')}</Text>
                 <Text style={styles.infoValue}>{parkName}</Text>
               </View>
             </View>
@@ -99,18 +103,18 @@ export default function ConfirmOrderScreen() {
             <View style={styles.infoRow}>
               <View style={styles.infoIconBox}><Ionicons name="calendar" size={16} color="#0077B6" /></View>
               <View style={styles.infoTextContainer}>
-                <Text style={styles.infoLabel}>Tarikh Lawatan</Text>
+                <Text style={styles.infoLabel}>{t('label_visit_date')}</Text>
                 <Text style={styles.infoValue}>{date}</Text>
               </View>
             </View>
             
             <View style={styles.ticketSummaryBox}>
-              <Text style={styles.ticketSummaryTitle}>Perincian Tiket & Harga:</Text>
+              <Text style={styles.ticketSummaryTitle}>{t('title_ticket_price_details')}</Text>
               
               {parseInt(adult) > 0 && (
                 <View style={styles.ticketRow}>
                   <Text style={styles.ticketDetailText}>
-                    • Dewasa <Text style={styles.ticketUnitPrice}>({adult} x RM {unitPrices ? parseFloat(unitPrices.adult).toFixed(2) : '...'})</Text>
+                    • {t('label_adult')} <Text style={styles.ticketUnitPrice}>({adult} x RM {unitPrices ? parseFloat(unitPrices.adult).toFixed(2) : '...'})</Text>
                   </Text>
                   <Text style={styles.ticketSubtotalText}>
                     RM {unitPrices ? (parseInt(adult) * parseFloat(unitPrices.adult)).toFixed(2) : '...'}
@@ -121,7 +125,7 @@ export default function ConfirmOrderScreen() {
               {parseInt(child) > 0 && (
                 <View style={styles.ticketRow}>
                   <Text style={styles.ticketDetailText}>
-                    • Kanak-kanak <Text style={styles.ticketUnitPrice}>({child} x RM {unitPrices ? parseFloat(unitPrices.child).toFixed(2) : '...'})</Text>
+                    • {t('label_child')} <Text style={styles.ticketUnitPrice}>({child} x RM {unitPrices ? parseFloat(unitPrices.child).toFixed(2) : '...'})</Text>
                   </Text>
                   <Text style={styles.ticketSubtotalText}>
                     RM {unitPrices ? (parseInt(child) * parseFloat(unitPrices.child)).toFixed(2) : '...'}
@@ -132,7 +136,7 @@ export default function ConfirmOrderScreen() {
               {parseInt(senior) > 0 && (
                 <View style={styles.ticketRow}>
                   <Text style={styles.ticketDetailText}>
-                    • Warga Emas <Text style={styles.ticketUnitPrice}>({senior} x RM {unitPrices ? parseFloat(unitPrices.senior).toFixed(2) : '...'})</Text>
+                    • {t('label_senior')} <Text style={styles.ticketUnitPrice}>({senior} x RM {unitPrices ? parseFloat(unitPrices.senior).toFixed(2) : '...'})</Text>
                   </Text>
                   <Text style={styles.ticketSubtotalText}>
                     RM {unitPrices ? (parseInt(senior) * parseFloat(unitPrices.senior)).toFixed(2) : '...'}
@@ -143,7 +147,7 @@ export default function ConfirmOrderScreen() {
               {parseInt(oku) > 0 && (
                 <View style={styles.ticketRow}>
                   <Text style={styles.ticketDetailText}>
-                    • OKU <Text style={styles.ticketUnitPrice}>({oku} x RM {unitPrices ? parseFloat(unitPrices.oku).toFixed(2) : '...'})</Text>
+                    • {t('label_oku')} <Text style={styles.ticketUnitPrice}>({oku} x RM {unitPrices ? parseFloat(unitPrices.oku).toFixed(2) : '...'})</Text>
                   </Text>
                   <Text style={styles.ticketSubtotalText}>
                     RM {unitPrices ? (parseInt(oku) * parseFloat(unitPrices.oku)).toFixed(2) : '...'}
@@ -154,7 +158,7 @@ export default function ConfirmOrderScreen() {
           </View>
         </View>
 
-        <Text style={styles.sectionTitle}>Kaedah Pembayaran</Text>
+        <Text style={styles.sectionTitle}>{t('title_payment_method')}</Text>
         
         <TouchableOpacity 
           style={[styles.paymentCard, paymentMethod === 'TNG' && styles.paymentCardActive]} 
@@ -170,7 +174,7 @@ export default function ConfirmOrderScreen() {
           
           <View style={styles.paymentTextContainer}>
             <Text style={styles.paymentTitle}>DuitNow QR</Text>
-            <Text style={styles.paymentSubtitle}>Imbas & Bayar</Text>
+            <Text style={styles.paymentSubtitle}>{t('subtitle_scan_pay')}</Text>
           </View>
           
           <Ionicons 
@@ -184,7 +188,7 @@ export default function ConfirmOrderScreen() {
 
       <View style={styles.bottomBar}>
         <View style={styles.priceContainer}>
-          <Text style={styles.totalLabel}>Jumlah Keseluruhan</Text>
+          <Text style={styles.totalLabel}>{t('label_grand_total')}</Text>
           <Text style={styles.totalPrice}>RM {parseFloat(total).toFixed(2)}</Text>
         </View>
         
@@ -193,7 +197,7 @@ export default function ConfirmOrderScreen() {
           onPress={handleProceedToPayment}
           disabled={!paymentMethod}
         >
-          <Text style={styles.checkoutBtnText}>Beli Sekarang</Text>
+          <Text style={styles.checkoutBtnText}>{t('btn_buy_now')}</Text>
           <Ionicons name="arrow-forward" size={18} color="#FFFFFF" style={{ marginLeft: 6 }} />
         </TouchableOpacity>
       </View>

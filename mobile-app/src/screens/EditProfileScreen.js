@@ -11,7 +11,10 @@ import { auth, db } from '../../firebaseConfig';
 import { ALL_COUNTRIES } from '../data/countries';
 import MaintenanceOverlay from '../components/MaintenanceOverlay';
 
-const InputField = ({ label, value, onChangeText, placeholder, icon, locked = false, prefix = null, keyboardType = "default" }) => (
+// 引入翻译钩子
+import { useTranslation } from 'react-i18next';
+
+const InputField = ({ label, value, onChangeText, placeholder, icon, locked = false, prefix = null, keyboardType = "default", maxLength }) => (
   <View style={styles.inputContainer}>
     <Text style={styles.inputLabel}>{label}</Text>
     <View style={[styles.inputBox, locked && styles.inputBoxLocked]}>
@@ -24,7 +27,8 @@ const InputField = ({ label, value, onChangeText, placeholder, icon, locked = fa
         placeholder={placeholder}
         placeholderTextColor="#CBD5E1"
         editable={!locked} 
-        keyboardType={keyboardType} 
+        keyboardType={keyboardType}
+        maxLength={maxLength}
       />
       {locked && <Ionicons name="lock-closed" size={18} color="#CBD5E1" />}
     </View>
@@ -50,6 +54,23 @@ const DropdownField = ({ label, value, onPress, placeholder, icon, locked = fals
 );
 
 export default function EditProfileScreen() {
+  const { t, i18n } = useTranslation(); 
+  
+  // 安全拦截机制：确保 i18n 完全加载后才渲染 UI，杜绝闪现 key 的问题
+  const [isI18nReady, setIsI18nReady] = useState(i18n.isInitialized);
+  
+  useEffect(() => {
+    if (!i18n.isInitialized) {
+      const handleInitialized = () => setIsI18nReady(true);
+      i18n.on('initialized', handleInitialized);
+      return () => {
+        i18n.off('initialized', handleInitialized);
+      };
+    } else {
+      setIsI18nReady(true);
+    }
+  }, [i18n]);
+
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
 
@@ -109,7 +130,7 @@ export default function EditProfileScreen() {
       try {
         const currentUser = auth.currentUser;
         if (!currentUser) {
-          Alert.alert("Ralat", "Sila log masuk semula.");
+          Alert.alert(t('alert_error').replace(": ", ""), t('alert_login_again'));
           router.replace('/login');
           return;
         }
@@ -150,47 +171,61 @@ export default function EditProfileScreen() {
         }
       } catch (error) {
         console.log("Error fetching user data:", error);
-        Alert.alert("Ralat", "Gagal memuat turun data profil.");
+        Alert.alert(t('alert_error').replace(": ", ""), t('alert_fetch_profile_fail'));
       } finally {
         setIsFetching(false); 
       }
     };
 
     fetchUserData();
-  }, []);
+  }, [t]);
 
   const handleContactAdmin = () => {
     const adminEmail = "admin@tamanlaut.com";
     const subject = "Permohonan Tukar Maklumat Identiti - Sistem e-Tiket";
     const body = `Hai Admin,\n\nSaya ingin memohon untuk menukar maklumat identiti saya di dalam sistem.\n\nID Pengguna: ${auth.currentUser?.uid}\nSebab Penukaran: `;
     Linking.openURL(`mailto:${adminEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`)
-      .catch(err => { Alert.alert("Hubungi Kami", "Sila hantar e-mel ke admin@tamanlaut.com atau hubungi 03-12345678."); });
+      .catch(err => { Alert.alert(t('alert_contact_admin_title'), t('alert_contact_admin_desc')); });
   };
 
   const handleSave = async () => {
     if (!userName || !phone || !nationality) {
-      Alert.alert("Ralat", "Nama Pengguna, No. Telefon dan Negara Asal adalah wajib diisi.");
+      Alert.alert(t('alert_error').replace(": ", ""), t('alert_mandatory_fields'));
       return;
+    }
+
+    if (userName.trim().length < 3) {
+      Alert.alert(t('alert_invalid_format'), t('alert_username_short'));
+      return;
+    }
+
+    if (!lockedFields.fullName && fullName.trim().length > 0 && fullName.trim().length < 3) {
+      Alert.alert(t('alert_invalid_format'), t('alert_fullname_short')); 
+      return;
+    }
+
+    if (!lockedFields.email && email.trim().length > 0) {
+      if (!email.toLowerCase().endsWith('@gmail.com')) {
+        Alert.alert(t('alert_invalid_format'), t('alert_invalid_email'));
+        return;
+      }
     }
 
     if (isMalaysian) {
       const phoneRegex = /^\d{2}-\d{7,8}$/;
       if (!phoneRegex.test(phone)) {
-        Alert.alert("Format Tidak Sah", "Sila masukkan No. Telefon dengan format yang betul.\n\nContoh: 12-3456789");
+        Alert.alert(t('alert_invalid_format'), t('alert_invalid_phone_my'));
         return;
       }
     } else {
       if (phone.trim().length < 8) {
-        Alert.alert("Format Tidak Sah", "Sila masukkan No. Telefon yang sah berserta kod negara.\n\nContoh: +65 8123 4567");
+        Alert.alert(t('alert_invalid_format'), t('alert_invalid_phone_intl'));
         return;
       }
     }
 
     if (emergencyContact && emergencyContact.length < 10) {
-      Alert.alert(
-        "Format Tidak Sah", 
-        "Kenalan Kecemasan mestilah mengandungi sekurang-kurangnya 10 digit nombor.\n\nContoh: 0123456789"
-      );
+      Alert.alert(t('alert_invalid_format'), t('alert_invalid_emergency'));
       return;
     }
 
@@ -198,12 +233,12 @@ export default function EditProfileScreen() {
       if (isMalaysian) {
         const icRegex = /^\d{12}$/;
         if (!icRegex.test(icPassport)) {
-          Alert.alert("Format Tidak Sah", "No. Kad Pengenalan mestilah tepat 12 digit nombor (tanpa -).\n\nContoh: 010203061234");
+          Alert.alert(t('alert_invalid_format'), t('alert_invalid_ic'));
           return;
         }
       } else {
         if (icPassport.trim().length < 5) {
-          Alert.alert("Format Tidak Sah", "Sila masukkan No. Pasport yang sah.");
+          Alert.alert(t('alert_invalid_format'), t('alert_invalid_passport'));
           return;
         }
       }
@@ -229,19 +264,29 @@ export default function EditProfileScreen() {
       await updateDoc(userRef, updateData);
 
       setIsLoading(false);
-      Alert.alert("Berjaya", "Profil anda telah dikemaskini!", [
-        { text: "OK", onPress: () => router.back() }
+      Alert.alert(t('alert_success'), t('alert_profile_updated'), [
+        { text: t('alert_ok'), onPress: () => router.back() }
       ]);
 
     } catch (error) {
       console.log("Error updating profile:", error);
       setIsLoading(false);
-      Alert.alert("Ralat", "Gagal menyimpan data.");
+      Alert.alert(t('alert_error').replace(": ", ""), t('alert_save_fails'));
     }
   };
 
   const hasAnyLockedField = lockedFields.fullName || lockedFields.email || lockedFields.icPassport || lockedFields.nationality;
 
+  // 1. 如果字典还没有加载完毕，显示纯净的 Loading 页面
+  if (!isI18nReady) {
+    return (
+      <SafeAreaView style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#0077B6" />
+      </SafeAreaView>
+    );
+  }
+
+  // 2. 加载完毕后，正常渲染你的所有组件
   return (
     <SafeAreaView style={styles.container}>
       <MaintenanceOverlay />
@@ -249,42 +294,44 @@ export default function EditProfileScreen() {
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color="#03045E" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Kemaskini Profil</Text>
+        <Text style={styles.headerTitle}>{t('header_edit_profile')}</Text>
         <View style={{ width: 24 }} />
       </View>
 
       {isFetching ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#0077B6" />
-          <Text style={styles.loadingText}>Memuat turun profil...</Text>
+          <Text style={styles.loadingText}>{t('msg_loading_profile')}</Text>
         </View>
       ) : (
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
           
-          <Text style={styles.sectionTitle}>Maklumat Perhubungan (Boleh Diubah)</Text>
+          <Text style={styles.sectionTitle}>{t('section_contact_info')}</Text>
           <View style={styles.card}>
-            <InputField label="Nama Pengguna (Paparan)" value={userName} onChangeText={setUserName} placeholder="Sila isi nama pengguna" icon="at" />
+            <InputField label={t('label_username')} value={userName} onChangeText={setUserName} placeholder={t('placeholder_username')} icon="at" maxLength={30} />
             <InputField 
-              label="No. Telefon" 
+              label={t('label_phone')} 
               value={phone} 
               onChangeText={handlePhoneChange} 
               placeholder={isMalaysian ? "12-3456789" : "+65 8123 4567"} 
               icon="call-outline" 
               prefix={isMalaysian ? "+60" : null} 
-              keyboardType={isMalaysian ? "phone-pad" : "default"} 
+              keyboardType={isMalaysian ? "phone-pad" : "default"}
+              maxLength={20} 
             />
             <InputField 
-              label="Kenalan Kecemasan (No. Tel)" 
+              label={t('label_emergency_contact')} 
               value={emergencyContact} 
               onChangeText={handleEmergencyContactChange} 
-              placeholder="Cth: 0123456789" 
+              placeholder={t('alert_invalid_emergency').split('Contoh: ')[1]}
               icon="warning-outline" 
-              keyboardType="numeric" 
+              keyboardType="numeric"
+              maxLength={15}
             />
           </View>
 
           <View style={styles.sectionHeaderRow}>
-            <Text style={styles.sectionTitle}>Maklumat Identiti & Akaun</Text>
+            <Text style={styles.sectionTitle}>{t('section_identity_info')}</Text>
           </View>
           
           <View style={styles.card}>
@@ -293,50 +340,53 @@ export default function EditProfileScreen() {
               <View style={styles.alertBox}>
                 <Ionicons name="information-circle" size={20} color="#0077B6" />
                 <View style={styles.alertTextContainer}>
-                  <Text style={styles.alertText}>Sebahagian maklumat telah disahkan dan <Text style={{fontWeight: 'bold'}}>dikunci</Text> untuk keselamatan.</Text>
+                  <Text style={styles.alertText}>{t('notice_locked_fields_1')}<Text style={{fontWeight: 'bold'}}>{t('notice_locked_fields_2')}</Text>{t('notice_locked_fields_3')}</Text>
                   <TouchableOpacity onPress={handleContactAdmin}>
-                    <Text style={styles.contactAdminText}>Perlu ubah? Hubungi Admin</Text>
+                    <Text style={styles.contactAdminText}>{t('btn_contact_admin_change')}</Text>
                   </TouchableOpacity>
                 </View>
               </View>
             )}
 
             <InputField 
-              label="Nama Penuh (Ikut IC/Pasport)" 
+              label={t('label_full_name')} 
               value={fullName} 
               onChangeText={setFullName} 
-              placeholder="Sila isi nama penuh anda" 
+              placeholder={t('placeholder_full_name')} 
               icon="person-outline" 
-              locked={lockedFields.fullName} 
+              locked={lockedFields.fullName}
+              maxLength={100}
             />
             
             <InputField 
-              label="E-mel (Log Masuk)" 
+              label={t('label_email')} 
               value={email} 
               onChangeText={setEmail} 
-              placeholder="Sila isi e-mel anda" 
+              placeholder={t('placeholder_email')} 
               icon="mail-outline" 
-              locked={lockedFields.email} 
+              locked={lockedFields.email}
+              maxLength={50}
             />
             
             <InputField 
-              label={isMalaysian ? "No. Kad Pengenalan (IC)" : "No. Pasport"} 
+              label={isMalaysian ? t('label_ic') : t('label_passport')} 
               value={icPassport} 
               onChangeText={handleIcPassportChange} 
-              placeholder={isMalaysian ? "Cth: 010203061234" : "Sila isi no. pasport anda"} 
+              placeholder={isMalaysian ? t('alert_invalid_ic').split('Contoh: ')[1] : t('placeholder_passport')} 
               icon="card-outline" 
               locked={lockedFields.icPassport} 
               keyboardType={isMalaysian ? "numeric" : "default"}
+              maxLength={isMalaysian ? 12 : 20}
             />
             
             <DropdownField 
-              label="Negara Asal" 
+              label={t('label_nationality')} 
               value={nationality} 
               onPress={() => {
                 setCountrySearchQuery(''); 
                 setIsCountryModalVisible(true);
               }}
-              placeholder="Pilih negara asal" 
+              placeholder={t('placeholder_nationality')} 
               icon="flag-outline" 
               locked={lockedFields.nationality} 
             />
@@ -348,7 +398,7 @@ export default function EditProfileScreen() {
       {!isFetching && (
         <View style={styles.footer}>
           <TouchableOpacity style={styles.saveButton} onPress={handleSave} disabled={isLoading}>
-            {isLoading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.saveButtonText}>Simpan Perubahan</Text>}
+            {isLoading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.saveButtonText}>{t('btn_save_changes')}</Text>}
           </TouchableOpacity>
         </View>
       )}
@@ -357,7 +407,7 @@ export default function EditProfileScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.countryModalContent}>
             <View style={styles.countryModalHeader}>
-              <Text style={styles.countryModalTitle}>Pilih Negara</Text>
+              <Text style={styles.countryModalTitle}>{t('modal_select_country')}</Text>
               <TouchableOpacity onPress={() => setIsCountryModalVisible(false)} style={styles.closeModalBtn}>
                 <Ionicons name="close" size={24} color="#64748B" />
               </TouchableOpacity>
@@ -367,7 +417,7 @@ export default function EditProfileScreen() {
               <Ionicons name="search" size={20} color="#90A4AE" style={{ marginRight: 10 }} />
               <TextInput 
                 style={styles.searchInput}
-                placeholder="Cari negara (Cth: Singapore)"
+                placeholder={t('placeholder_search_country')}
                 placeholderTextColor="#90A4AE"
                 value={countrySearchQuery}
                 onChangeText={setCountrySearchQuery}
@@ -396,8 +446,8 @@ export default function EditProfileScreen() {
               ListEmptyComponent={
                 <View style={styles.emptySearchContainer}>
                   <Ionicons name="earth-outline" size={40} color="#CBD5E1" />
-                  <Text style={styles.emptySearchText}>Tiada padanan dijumpai.</Text>
-                  <Text style={styles.emptySearchSubText}>Sila semak semula ejaan anda.</Text>
+                  <Text style={styles.emptySearchText}>{t('empty_search_match')}</Text>
+                  <Text style={styles.emptySearchSubText}>{t('empty_search_hint')}</Text>
                 </View>
               }
             />
@@ -413,7 +463,7 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 15, paddingBottom: 15, backgroundColor: '#FFFFFF' },
   backButton: { padding: 5 },
   headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#03045E' },
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F1F5F9' },
   loadingText: { marginTop: 10, color: '#0077B6', fontWeight: '500' },
   scrollContent: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 100 },
   sectionHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 },

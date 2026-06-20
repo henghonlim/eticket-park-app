@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   View, Text, StyleSheet, FlatList, TouchableOpacity, 
-  Image, ActivityIndicator, Modal, Platform, ScrollView
+  Image, ActivityIndicator, Modal, Platform, ScrollView, Alert
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -12,8 +12,10 @@ import { getAuth } from 'firebase/auth';
 import MaintenanceOverlay from '../components/MaintenanceOverlay';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import { useTranslation } from 'react-i18next';
 
 export default function HistoryTicketsScreen() {
+  const { t } = useTranslation(); // 自动继承全局语言设定
   const router = useRouter();
   const auth = getAuth();
   const userId = auth.currentUser?.uid;
@@ -43,7 +45,6 @@ export default function HistoryTicketsScreen() {
       today.setHours(0, 0, 0, 0);
 
       const filtered = allData.filter(ticket => {
-
         if (ticket.status === "Telah Digunakan") return true;
         if (ticket.status === "Ditolak" || ticket.status === "Gagal") return true;
         if (ticket.status === "Sah") {
@@ -67,7 +68,7 @@ export default function HistoryTicketsScreen() {
     return () => unsubscribe();
   }, [userId]);
 
-const parseCustomDate = (dateStr) => {
+  const parseCustomDate = (dateStr) => {
     if (!dateStr) return NaN;
   
     let d = new Date(dateStr);
@@ -92,9 +93,18 @@ const parseCustomDate = (dateStr) => {
     return NaN; 
   };
 
+  // Helper function: Translate database status to display language
+  const getTranslatedStatus = (status) => {
+    if (status === "Sah") return t('status_expired'); // In history, "Sah" means it expired
+    if (status === "Telah Digunakan") return t('status_used');
+    if (status === "Ditolak") return t('status_rejected');
+    if (status === "Gagal") return t('status_failed');
+    return status;
+  };
+
   const handleDownloadPDF = async () => {
     if (!ticketForModal) {
-      Alert.alert("Ralat", "Butiran tiket tidak dijumpai.");
+      Alert.alert("Ralat", t('alert_ticket_not_found'));
       return;
     }
 
@@ -103,22 +113,22 @@ const parseCustomDate = (dateStr) => {
       if (ticketForModal.counts?.adult > 0) {
         const uPrice = parseFloat(ticketForModal.prices?.adult || 0).toFixed(2);
         const sub = (ticketForModal.counts.adult * (ticketForModal.prices?.adult || 0)).toFixed(2);
-        itemRowsHtml += `<tr><td style="padding: 8px 0; color: #475569;">${ticketForModal.counts.adult} x Dewasa <span style="font-size: 12px; color: #94A3B8;">(RM ${uPrice}/pax)</span></td><td style="padding: 8px 0; text-align: right; font-weight: bold;">RM ${sub}</td></tr>`;
+        itemRowsHtml += `<tr><td style="padding: 8px 0; color: #475569;">${ticketForModal.counts.adult} x ${t('pax_adult')} <span style="font-size: 12px; color: #94A3B8;">(RM ${uPrice}/pax)</span></td><td style="padding: 8px 0; text-align: right; font-weight: bold;">RM ${sub}</td></tr>`;
       }
       if (ticketForModal.counts?.child > 0) {
         const uPrice = parseFloat(ticketForModal.prices?.child || 0).toFixed(2);
         const sub = (ticketForModal.counts.child * (ticketForModal.prices?.child || 0)).toFixed(2);
-        itemRowsHtml += `<tr><td style="padding: 8px 0; color: #475569;">${ticketForModal.counts.child} x Kanak-kanak <span style="font-size: 12px; color: #94A3B8;">(RM ${uPrice}/pax)</span></td><td style="padding: 8px 0; text-align: right; font-weight: bold;">RM ${sub}</td></tr>`;
+        itemRowsHtml += `<tr><td style="padding: 8px 0; color: #475569;">${ticketForModal.counts.child} x ${t('pax_child')} <span style="font-size: 12px; color: #94A3B8;">(RM ${uPrice}/pax)</span></td><td style="padding: 8px 0; text-align: right; font-weight: bold;">RM ${sub}</td></tr>`;
       }
       if (ticketForModal.counts?.senior > 0) {
         const uPrice = parseFloat(ticketForModal.prices?.senior || 0).toFixed(2);
         const sub = (ticketForModal.counts.senior * (ticketForModal.prices?.senior || 0)).toFixed(2);
-        itemRowsHtml += `<tr><td style="padding: 8px 0; color: #475569;">${ticketForModal.counts.senior} x Warga Emas <span style="font-size: 12px; color: #94A3B8;">(RM ${uPrice}/pax)</span></td><td style="padding: 8px 0; text-align: right; font-weight: bold;">RM ${sub}</td></tr>`;
+        itemRowsHtml += `<tr><td style="padding: 8px 0; color: #475569;">${ticketForModal.counts.senior} x ${t('pax_senior')} <span style="font-size: 12px; color: #94A3B8;">(RM ${uPrice}/pax)</span></td><td style="padding: 8px 0; text-align: right; font-weight: bold;">RM ${sub}</td></tr>`;
       }
       if (ticketForModal.counts?.oku > 0) {
         const uPrice = parseFloat(ticketForModal.prices?.oku || 0).toFixed(2);
         const sub = (ticketForModal.counts.oku * (ticketForModal.prices?.oku || 0)).toFixed(2);
-        itemRowsHtml += `<tr><td style="padding: 8px 0; color: #475569;">${ticketForModal.counts.oku} x OKU <span style="font-size: 12px; color: #94A3B8;">(RM ${uPrice}/pax)</span></td><td style="padding: 8px 0; text-align: right; font-weight: bold;">RM ${sub}</td></tr>`;
+        itemRowsHtml += `<tr><td style="padding: 8px 0; color: #475569;">${ticketForModal.counts.oku} x ${t('pax_oku')} <span style="font-size: 12px; color: #94A3B8;">(RM ${uPrice}/pax)</span></td><td style="padding: 8px 0; text-align: right; font-weight: bold;">RM ${sub}</td></tr>`;
       }
 
       const htmlTemplate = `
@@ -147,27 +157,27 @@ const parseCustomDate = (dateStr) => {
             <div class="invoice-container">
               <div class="header">
                 <p class="logo">E-TIKET TAMAN LAUT</p>
-                <p class="sub-logo">KEMENTERIAN SUMBER ASLI & ALAM SEKITAR</p>
-                <div class="title">RESIT RASMI</div>
+                <p class="sub-logo">${t('ereceipt_sublogo')}</p>
+                <div class="title">${t('ereceipt_title')}</div>
               </div>
               <table class="info-table">
-                <tr><td class="info-label">Tarikh Tempahan:</td><td class="info-value">${ticketForModal.bookingDate}</td></tr>
-                <tr><td class="info-label">No. Transaksi:</td><td class="info-value">TX-${ticketForModal.transactionId?.slice(0, 8).toUpperCase() || '10293'}</td></tr>
-                <tr><td class="info-label">Destinasi Taman Laut:</td><td class="info-value">${ticketForModal.parkName}</td></tr>
+                <tr><td class="info-label">${t('ereceipt_date')}:</td><td class="info-value">${ticketForModal.bookingDate}</td></tr>
+                <tr><td class="info-label">${t('ereceipt_tx_no')}:</td><td class="info-value">TX-${ticketForModal.transactionId?.slice(0, 8).toUpperCase() || '10293'}</td></tr>
+                <tr><td class="info-label">${t('ereceipt_park')}:</td><td class="info-value">${ticketForModal.parkName}</td></tr>
               </table>
               <div class="divider"></div>
-              <div class="section-title">Perincian Kuantiti Tiket</div>
+              <div class="section-title">${t('ereceipt_details')}</div>
               <table style="width: 100%; font-size: 15px;">
                 ${itemRowsHtml}
               </table>
               <div class="divider"></div>
               <table class="total-table">
                 <tr>
-                  <td class="total-label">JUMLAH BESAR PAYABLE</td>
+                  <td class="total-label">${t('ereceipt_grand_total')}</td>
                   <td class="total-value">RM ${ticketForModal.totalAmount ? parseFloat(ticketForModal.totalAmount).toFixed(2) : "0.00"}</td>
                 </tr>
               </table>
-              <p class="footer-text">Resit ini dijana secara automatik oleh sistem e-Tiket Taman Laut Malaysia.<br>Terima kasih kerana menyokong pelancongan marin negara.</p>
+              <p class="footer-text">${t('ereceipt_footer')}</p>
             </div>
           </body>
         </html>
@@ -179,21 +189,19 @@ const parseCustomDate = (dateStr) => {
       if (isSharingAvailable) {
         await Sharing.shareAsync(uri, {
           mimeType: 'application/pdf',
-          dialogTitle: 'Kongsi atau Simpan E-Resit',
+          dialogTitle: t('share_dialog_title'),
           UTI: 'com.adobe.pdf'
         });
       } else {
-        Alert.alert("Ralat", "Telefon anda tidak menyokong fungsi perkongsian ini.");
+        Alert.alert("Ralat", t('alert_share_not_supported'));
       }
     } catch (error) {
       console.error(error);
-      Alert.alert("Ralat", "Gagal menjana PDF: " + error.message);
+      Alert.alert("Ralat", t('alert_pdf_failed') + error.message);
     }
   };
 
   const renderHistoryItem = ({ item }) => {
-    const isRejected = item.status === "Ditolak" || item.status === "Gagal";
-    
     return (
       <View style={[styles.ticketCard, { opacity: 0.8 }]}>
         <View style={styles.cardHeader}>
@@ -203,24 +211,24 @@ const parseCustomDate = (dateStr) => {
           </View>
           <View style={[styles.statusBadge, { 
             backgroundColor: 
-              item.status === "Ditolak" ? '#FEE2E2' : 
+              item.status === "Ditolak" || item.status === "Gagal" ? '#FEE2E2' : 
               item.status === "Telah Digunakan" ? '#DCFCE7' :
               '#E2E8F0'
           }]}>
             <Text style={[styles.statusText, { 
               color: 
-                item.status === "Ditolak" ? '#EF4444' : 
+                item.status === "Ditolak" || item.status === "Gagal" ? '#EF4444' : 
                 item.status === "Telah Digunakan" ? '#10B981' :
                 '#64748B' 
             }]}>
-              {item.status === "Sah" ? "Tamat Tempoh" : item.status}
+              {getTranslatedStatus(item.status)}
             </Text>
         </View>
         </View>
 
         <View style={styles.cardBody}>
-          <Text style={styles.detailText}>Tarikh Lawatan: {item.bookingDate}</Text>
-          <Text style={styles.hintText}>Klik untuk lihat rekod penuh</Text>
+          <Text style={styles.detailText}>{t('ticket_visit_date')}: {item.bookingDate}</Text>
+          <Text style={styles.hintText}>{t('ticket_hint_full_record')}</Text>
         </View>
 
         <View style={styles.cardFooter}>
@@ -233,7 +241,7 @@ const parseCustomDate = (dateStr) => {
               }}
             >
               <Ionicons name="receipt-outline" size={16} color="#0077B6" />
-              <Text style={styles.actionBtnText}>E-Resit Rasmi</Text>
+              <Text style={styles.actionBtnText}>{t('ticket_btn_ereceipt')}</Text>
             </TouchableOpacity>
           ) : (
             <TouchableOpacity 
@@ -244,7 +252,7 @@ const parseCustomDate = (dateStr) => {
               }}
             >
               <Ionicons name="image-outline" size={16} color="#64748B" />
-              <Text style={[styles.actionBtnText, { color: '#64748B' }]}>Bukti Bayaran</Text>
+              <Text style={[styles.actionBtnText, { color: '#64748B' }]}>{t('ticket_btn_proof')}</Text>
             </TouchableOpacity>
           )}
 
@@ -257,7 +265,7 @@ const parseCustomDate = (dateStr) => {
             }}
           >
             <Ionicons name="archive-outline" size={16} color="#FFFFFF" />
-            <Text style={styles.qrBtnText}>Lihat Rekod</Text>
+            <Text style={styles.qrBtnText}>{t('ticket_btn_view_record')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -271,7 +279,7 @@ const parseCustomDate = (dateStr) => {
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={24} color="#03045E" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Sejarah Tiket</Text>
+        <Text style={styles.headerTitle}>{t('header_ticket_history')}</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -286,7 +294,7 @@ const parseCustomDate = (dateStr) => {
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Ionicons name="receipt-outline" size={60} color="#CBD5E1" />
-              <Text style={styles.emptyText}>Tiada sejarah rekod.</Text>
+              <Text style={styles.emptyText}>{t('empty_no_history')}</Text>
             </View>
           }
         />
@@ -298,7 +306,7 @@ const parseCustomDate = (dateStr) => {
             <View style={styles.modernTicketContainer}>
               <View style={[styles.modernTicketTop, { backgroundColor: '#F1F5F9' }]}>
                 <View style={styles.modalHeader}>
-                  <Text style={styles.modalSubTitle}>REKOD TIKET</Text>
+                  <Text style={styles.modalSubTitle}>{t('modal_history_title')}</Text>
                   <TouchableOpacity onPress={() => setIsQrVisible(false)}>
                     <Ionicons name="close-circle" size={28} color="#94A3B8" />
                   </TouchableOpacity>
@@ -306,12 +314,12 @@ const parseCustomDate = (dateStr) => {
                 <Text style={styles.parkNameDark}>{ticketForModal.parkName}</Text>
                 
                 <View style={styles.paxContainer}>
-                  <Text style={styles.paxTitle}>Butiran Pax:</Text>
+                  <Text style={styles.paxTitle}>{t('modal_qr_pax_details')}</Text>
                   <View style={styles.paxGrid}>
-                    <Text style={styles.paxItem}>Dewasa: {ticketForModal.counts?.adult || 0}</Text>
-                    <Text style={styles.paxItem}>Kanak: {ticketForModal.counts?.child || 0}</Text>
-                    <Text style={styles.paxItem}>Warga: {ticketForModal.counts?.senior || 0}</Text>
-                    <Text style={styles.paxItem}>OKU: {ticketForModal.counts?.oku || 0}</Text>
+                    <Text style={styles.paxItem}>{t('pax_adult')}: {ticketForModal.counts?.adult || 0}</Text>
+                    <Text style={styles.paxItem}>{t('pax_child')}: {ticketForModal.counts?.child || 0}</Text>
+                    <Text style={styles.paxItem}>{t('pax_senior')}: {ticketForModal.counts?.senior || 0}</Text>
+                    <Text style={styles.paxItem}>{t('pax_oku')}: {ticketForModal.counts?.oku || 0}</Text>
                   </View>
                 </View>
               </View>
@@ -329,7 +337,7 @@ const parseCustomDate = (dateStr) => {
                     />
                     <View style={styles.expiredOverlay}>
                       <Text style={[styles.expiredStamp, { borderColor: '#10B981', color: '#10B981' }]}>
-                        TELAH DIGUNAKAN
+                        {t('status_used')}
                       </Text>
                     </View>
                   </View>
@@ -341,18 +349,18 @@ const parseCustomDate = (dateStr) => {
                       onLoad={() => setIsImageLoading(false)}
                     />
                     <View style={styles.expiredOverlay}>
-                      <Text style={styles.expiredStamp}>TAMAT TEMPOH</Text>
+                      <Text style={styles.expiredStamp}>{t('status_expired')}</Text>
                     </View>
                   </View>
                 ) : (
                   <View style={styles.rejectedBox}>
                     <Ionicons name="close-circle-outline" size={80} color="#EF4444" />
-                    <Text style={styles.rejectedStamp}>DITOLAK</Text>
+                    <Text style={styles.rejectedStamp}>{t('status_rejected')}</Text>
                   </View>
                 )}
                 
                 <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Tarikh Lawatan:</Text>
+                  <Text style={styles.infoLabel}>{t('ticket_visit_date')}:</Text>
                   <Text style={styles.infoValue}>{ticketForModal.bookingDate}</Text>
                 </View>
                 <View style={styles.infoRow}>
@@ -362,9 +370,9 @@ const parseCustomDate = (dateStr) => {
 
                 <View style={styles.noticeBox}>
                   <Text style={styles.noticeText}>
-                    {ticketForModal.status === "Sah" 
-                      ? "Rekod ini disimpan untuk rujukan anda sahaja. Tiket ini tidak lagi sah untuk kemasukan." 
-                      : "Permohonan tiket ini telah ditolak oleh pihak pengurusan."}
+                    {ticketForModal.status === "Sah" || ticketForModal.status === "Telah Digunakan"
+                      ? t('notice_history_expired') 
+                      : t('notice_history_rejected')}
                   </Text>
                 </View>
               </View>
@@ -391,32 +399,32 @@ const parseCustomDate = (dateStr) => {
               <ScrollView showsVerticalScrollIndicator={false}>
                 <View style={styles.eReceiptTop}>
                   <Text style={styles.eReceiptLogo}>E-TIKET TAMAN LAUT</Text>
-                  <Text style={styles.eReceiptSubLogo}>Jabatan Perikanan Malaysia</Text>
-                  <Text style={styles.eReceiptTitle}>RESIT RASMI</Text>
+                  <Text style={styles.eReceiptSubLogo}>{t('ereceipt_sublogo')}</Text>
+                  <Text style={styles.eReceiptTitle}>{t('ereceipt_title')}</Text>
                 </View>
 
                 <View style={styles.eReceiptBody}>
                   <View style={styles.eReceiptRow}>
-                    <Text style={styles.eReceiptLabel}>Tarikh:</Text>
+                    <Text style={styles.eReceiptLabel}>{t('ereceipt_date')}:</Text>
                     <Text style={styles.eReceiptValue}>{ticketForModal.bookingDate}</Text>
                   </View>
                   <View style={styles.eReceiptRow}>
-                    <Text style={styles.eReceiptLabel}>No. Transaksi:</Text>
+                    <Text style={styles.eReceiptLabel}>{t('ereceipt_tx_no')}:</Text>
                     <Text style={styles.eReceiptValue}>TX-{ticketForModal.transactionId?.slice(0,8).toUpperCase() || '10293'}</Text>
                   </View>
                   <View style={styles.eReceiptRow}>
-                    <Text style={styles.eReceiptLabel}>Taman Laut:</Text>
+                    <Text style={styles.eReceiptLabel}>{t('ereceipt_park')}:</Text>
                     <Text style={styles.eReceiptValue}>{ticketForModal.parkName}</Text>
                   </View>
                   
                   <View style={styles.dashedDivider} />
 
-                  <Text style={styles.tableHeader}>PERINCIAN TIKET</Text>
+                  <Text style={styles.tableHeader}>{t('ereceipt_details')}</Text>
                   
                   {ticketForModal.counts?.adult > 0 && (
                     <View style={styles.eReceiptRow}>
                       <Text style={styles.eReceiptLabel}>
-                        {ticketForModal.counts.adult} x Dewasa <Text style={{fontSize: 12, color: '#94A3B8'}}>(RM {parseFloat(ticketForModal.prices?.adult || 0).toFixed(2)}/pax)</Text>
+                        {ticketForModal.counts.adult} x {t('pax_adult')} <Text style={{fontSize: 12, color: '#94A3B8'}}>(RM {parseFloat(ticketForModal.prices?.adult || 0).toFixed(2)}/pax)</Text>
                       </Text>
                       <Text style={styles.eReceiptValue}>RM {(ticketForModal.counts.adult * (ticketForModal.prices?.adult || 0)).toFixed(2)}</Text>
                     </View>
@@ -424,7 +432,7 @@ const parseCustomDate = (dateStr) => {
                   {ticketForModal.counts?.child > 0 && (
                     <View style={styles.eReceiptRow}>
                       <Text style={styles.eReceiptLabel}>
-                        {ticketForModal.counts.child} x Kanak-kanak <Text style={{fontSize: 12, color: '#94A3B8'}}>(RM {parseFloat(ticketForModal.prices?.child || 0).toFixed(2)}/pax)</Text>
+                        {ticketForModal.counts.child} x {t('pax_child')} <Text style={{fontSize: 12, color: '#94A3B8'}}>(RM {parseFloat(ticketForModal.prices?.child || 0).toFixed(2)}/pax)</Text>
                       </Text>
                       <Text style={styles.eReceiptValue}>RM {(ticketForModal.counts.child * (ticketForModal.prices?.child || 0)).toFixed(2)}</Text>
                     </View>
@@ -432,7 +440,7 @@ const parseCustomDate = (dateStr) => {
                   {ticketForModal.counts?.senior > 0 && (
                     <View style={styles.eReceiptRow}>
                       <Text style={styles.eReceiptLabel}>
-                        {ticketForModal.counts.senior} x Warga Emas <Text style={{fontSize: 12, color: '#94A3B8'}}>(RM {parseFloat(ticketForModal.prices?.senior || 0).toFixed(2)}/pax)</Text>
+                        {ticketForModal.counts.senior} x {t('pax_senior')} <Text style={{fontSize: 12, color: '#94A3B8'}}>(RM {parseFloat(ticketForModal.prices?.senior || 0).toFixed(2)}/pax)</Text>
                       </Text>
                       <Text style={styles.eReceiptValue}>RM {(ticketForModal.counts.senior * (ticketForModal.prices?.senior || 0)).toFixed(2)}</Text>
                     </View>
@@ -440,7 +448,7 @@ const parseCustomDate = (dateStr) => {
                   {ticketForModal.counts?.oku > 0 && (
                     <View style={styles.eReceiptRow}>
                       <Text style={styles.eReceiptLabel}>
-                        {ticketForModal.counts.oku} x OKU <Text style={{fontSize: 12, color: '#94A3B8'}}>(RM {parseFloat(ticketForModal.prices?.oku || 0).toFixed(2)}/pax)</Text>
+                        {ticketForModal.counts.oku} x {t('pax_oku')} <Text style={{fontSize: 12, color: '#94A3B8'}}>(RM {parseFloat(ticketForModal.prices?.oku || 0).toFixed(2)}/pax)</Text>
                       </Text>
                       <Text style={styles.eReceiptValue}>RM {(ticketForModal.counts.oku * (ticketForModal.prices?.oku || 0)).toFixed(2)}</Text>
                     </View>
@@ -449,21 +457,21 @@ const parseCustomDate = (dateStr) => {
                   <View style={styles.dashedDivider} />
 
                   <View style={styles.eReceiptRowTotal}>
-                    <Text style={styles.eReceiptLabelTotal}>JUMLAH BESAR</Text>
+                    <Text style={styles.eReceiptLabelTotal}>{t('ereceipt_grand_total')}</Text>
                     <Text style={styles.eReceiptValueTotal}>RM {ticketForModal.totalAmount ? parseFloat(ticketForModal.totalAmount).toFixed(2) : "0.00"}</Text>
                   </View>
 
-                  <Text style={styles.eReceiptFooter}>Terima kasih kerana menyokong pelancongan marin Malaysia.</Text>
+                  <Text style={styles.eReceiptFooter}>{t('ereceipt_footer')}</Text>
                 </View>
               </ScrollView>
 
               <View style={styles.eReceiptActions}>
                 <TouchableOpacity style={styles.closeReceiptBtn} onPress={() => setIsEReceiptVisible(false)}>
-                  <Text style={styles.closeReceiptBtnText}>Tutup</Text>
+                  <Text style={styles.closeReceiptBtnText}>{t('btn_close')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.downloadPdfBtn} onPress={handleDownloadPDF}>
                   <Ionicons name="download-outline" size={18} color="#FFF" />
-                  <Text style={styles.downloadPdfBtnText}>Muat Turun PDF</Text>
+                  <Text style={styles.downloadPdfBtnText}>{t('btn_download_pdf')}</Text>
                 </TouchableOpacity>
               </View>
             </View>

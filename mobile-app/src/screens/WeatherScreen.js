@@ -11,8 +11,11 @@ import { db } from '../../firebaseConfig';
 import { logoutUser } from '../services/AuthService';
 import NotificationBell from '../components/NotificationBell';
 import MaintenanceOverlay from '../components/MaintenanceOverlay';
+import { useTranslation } from 'react-i18next';
+import LanguageToggle from '../components/LanguageToggle';
 
 export default function WeatherScreen() {
+  const { t } = useTranslation(); // 激活翻译
   const router = useRouter();
 
   const [isProfileMenuVisible, setIsProfileMenuVisible] = useState(false);
@@ -28,25 +31,26 @@ export default function WeatherScreen() {
   const [errorMsg, setErrorMsg] = useState(null);
   const [forecastTab, setForecastTab] = useState('hourly');
 
+  // 将天气代码转换为带翻译的文字
   const getWeatherInfo = (code, isDay = 1) => {
-    if (code === 0) return { title: 'Cerah', icon: isDay ? 'weather-sunny' : 'weather-night', color: '#F59E0B', badWeather: false };
+    if (code === 0) return { title: t('weather_sunny'), icon: isDay ? 'weather-sunny' : 'weather-night', color: '#F59E0B', badWeather: false };
     
-    if (code >= 1 && code <= 3) return { title: 'Berawan Separa', icon: isDay ? 'weather-partly-cloudy' : 'weather-night-partly-cloudy', color: '#60A5FA', badWeather: false };
-    if (code >= 4 && code <= 49) return { title: 'Kabus', icon: 'weather-fog', color: '#CBD5E1', badWeather: false };
+    if (code >= 1 && code <= 3) return { title: t('weather_partly_cloudy'), icon: isDay ? 'weather-partly-cloudy' : 'weather-night-partly-cloudy', color: '#60A5FA', badWeather: false };
+    if (code >= 4 && code <= 49) return { title: t('weather_fog'), icon: 'weather-fog', color: '#CBD5E1', badWeather: false };
 
     if (code >= 50 && code <= 62)
-      return { title: 'Hujan Ringan', icon: 'weather-partly-rainy', color: '#38BDF8', alertBg: '#F0F9FF', alertBorder: '#BAE6FD', alertText: '#0284C7', badWeather: true };
+      return { title: t('weather_light_rain'), icon: 'weather-partly-rainy', color: '#38BDF8', alertBg: '#F0F9FF', alertBorder: '#BAE6FD', alertText: '#0284C7', badWeather: true };
 
     if (code >= 63 && code <= 64)
-      return { title: 'Hujan Sederhana', icon: 'weather-rainy', color: '#3B82F6', alertBg: '#EFF6FF', alertBorder: '#BFDBFE', alertText: '#1D4ED8', badWeather: true };
+      return { title: t('weather_moderate_rain'), icon: 'weather-rainy', color: '#3B82F6', alertBg: '#EFF6FF', alertBorder: '#BFDBFE', alertText: '#1D4ED8', badWeather: true };
 
     if (code >= 65 && code <= 84)
-      return { title: 'Hujan Lebat', icon: 'weather-pouring', color: '#2563EB', alertBg: '#DBEAFE', alertBorder: '#93C5FD', alertText: '#1E40AF', badWeather: true };
+      return { title: t('weather_heavy_rain'), icon: 'weather-pouring', color: '#2563EB', alertBg: '#DBEAFE', alertBorder: '#93C5FD', alertText: '#1E40AF', badWeather: true };
 
     if (code >= 85 && code <= 99)
-      return { title: 'Ribut Petir', icon: 'weather-lightning-rainy', color: '#4C1D95', alertBg: '#F3E8FF', alertBorder: '#D8B4FE', alertText: '#6B21A8', badWeather: true };
+      return { title: t('weather_thunderstorm'), icon: 'weather-lightning-rainy', color: '#4C1D95', alertBg: '#F3E8FF', alertBorder: '#D8B4FE', alertText: '#6B21A8', badWeather: true };
 
-    return { title: 'Tidak Diketahui', icon: 'weather-cloudy-alert', color: '#64748B', badWeather: false };
+    return { title: t('weather_unknown'), icon: 'weather-cloudy-alert', color: '#64748B', badWeather: false };
   };
 
   useEffect(() => {
@@ -108,12 +112,11 @@ export default function WeatherScreen() {
       }
       setHourlyForecast(hourly);
 
-      const daysName = ['Ahad', 'Isnin', 'Selasa', 'Rabu', 'Khamis', 'Jumaat', 'Sabtu'];
+      // 动态使用字典里的一周天数翻译
       const daily = [];
       for (let i = 0; i < 7; i++) {
-        const dateObj = new Date(data.daily.time[i]);
         daily.push({
-          day: i === 0 ? 'Hari Ini' : daysName[dateObj.getDay()],
+          rawDate: data.daily.time[i], // 👈 改成存原汁原味的日期，不要在这里翻译！
           max: Math.round(data.daily.temperature_2m_max[i]),
           min: Math.round(data.daily.temperature_2m_min[i]),
           code: data.daily.weather_code[i]
@@ -123,9 +126,9 @@ export default function WeatherScreen() {
 
     } catch (error) {
       if (error.name === 'AbortError') {
-        setErrorMsg("Sistem cuaca lambat bertindak balas (Timeout). Sila cuba lagi.");
+        setErrorMsg(t('alert_weather_timeout'));
       } else {
-        setErrorMsg("Gagal memuatkan data cuaca. Sila semak internet anda.");
+        setErrorMsg(t('alert_weather_fail'));
       }
       console.log("Weather Fetching Error:", error.message);
     } finally {
@@ -142,20 +145,16 @@ export default function WeatherScreen() {
     try {
       setIsProfileMenuVisible(false);
       await logoutUser();
-      Alert.alert("Berjaya", "Anda telah log keluar.");
+      Alert.alert(t('alert_success'), t('alert_logout_success'));
       router.replace('/login');
-    } catch (error) { Alert.alert("Ralat", error.message); }
+    } catch (error) { Alert.alert(t('alert_error').replace(": ", ""), error.message); }
   };
   
-  const handleDummyPress = (featureName) => {
-    Alert.alert("Akan Datang", `Fungsi ${featureName} akan datang! (Menunggu tetapan Admin)`);
-  };
-
   if (loading) {
     return (
       <SafeAreaView style={styles.centerContainer}>
         <ActivityIndicator size="large" color="#03045E" />
-        <Text style={{ marginTop: 15, color: '#03045E', fontWeight: 'bold' }}>Menyemak cuaca...</Text>
+        <Text style={{ marginTop: 15, color: '#03045E', fontWeight: 'bold' }}>{t('weather_checking')}</Text>
       </SafeAreaView>
     );
   }
@@ -175,29 +174,29 @@ export default function WeatherScreen() {
             getDocs(collection(db, "parks")).then(snapshot => {
               const parkList = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()})).filter(p => p.location);
               if (parkList.length > 0) handleSelectPark(parkList[0]);
-              else { setLoading(false); setErrorMsg("Tiada lokasi taman laut dijumpai."); }
-            }).catch(() => { setLoading(false); setErrorMsg("Gagal menyambung ke pangkalan data."); });
+              else { setLoading(false); setErrorMsg(t('alert_no_park_found')); }
+            }).catch(() => { setLoading(false); setErrorMsg(t('alert_db_connect_fail')); });
           }}
         >
-          <Text style={{ color: '#FFFFFF', fontWeight: 'bold', fontSize: 16 }}>Cuba Lagi</Text>
+          <Text style={{ color: '#FFFFFF', fontWeight: 'bold', fontSize: 16 }}>{t('btn_try_again')}</Text>
         </TouchableOpacity>
         
         <View style={styles.bottomTabBar}>
           <TouchableOpacity style={styles.tabItem} onPress={() => router.replace('/usermainpage')}>
             <Ionicons name="compass-outline" size={32} color="#90A4AE" />
-            <Text style={styles.tabText}>Laman Utama</Text>
+            <Text style={styles.tabText}>{t('tab_home')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.tabItem} onPress={() => router.replace('/mytickets')}>
             <Ionicons name="ticket-outline" size={32} color="#90A4AE" />
-            <Text style={styles.tabText}>Tiket Saya</Text>
+            <Text style={styles.tabText}>{t('tab_my_tickets')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.tabItem}>
             <Ionicons name="partly-sunny" size={32} color="#0077B6" />
-            <Text style={[styles.tabText, styles.tabTextActive]}>Cuaca</Text>
+            <Text style={[styles.tabText, styles.tabTextActive]}>{t('tab_weather')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.tabItem} onPress={() => router.replace('/usermap')}>
             <Ionicons name="map-outline" size={32} color="#90A4AE" />
-            <Text style={styles.tabText}>Peta</Text>
+            <Text style={styles.tabText}>{t('tab_map')}</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -221,28 +220,33 @@ export default function WeatherScreen() {
     <SafeAreaView style={styles.container}>
       <MaintenanceOverlay />
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Ramalan Cuaca</Text>
-        <View style={styles.headerIcons}>
-          <NotificationBell />
+        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit>{t('header_weather_forecast')}</Text>
         
+        {/* 完美复刻之前页面的右上角间距排版，带上切换按钮 */}
+        <View style={styles.headerIcons}>
+          <View style={{ marginRight: 15 }}>
+            <LanguageToggle />
+          </View>
+          <NotificationBell />
           <TouchableOpacity onPress={() => setIsProfileMenuVisible(true)}>
             <Image source={{ uri: 'https://ui-avatars.com/api/?name=User&background=0077B6&color=fff&size=128' }} style={styles.profileImage} />
           </TouchableOpacity>
         </View>
+
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
         
-        <Text style={styles.sectionLabel}>Pilih Lokasi Taman Laut</Text>
+        <Text style={styles.sectionLabel}>{t('label_select_park')}</Text>
         <TouchableOpacity style={styles.pickerBtn} onPress={() => setShowPicker(true)}>
           <Ionicons name="location" size={20} color="#0077B6" />
-          <Text style={styles.pickerText}>{selectedPark ? selectedPark.name : 'Tiada lokasi tersedia'}</Text>
+          <Text style={styles.pickerText}>{selectedPark ? selectedPark.name : t('no_location_available')}</Text>
           <Ionicons name="chevron-down" size={20} color="#94A3B8" />
         </TouchableOpacity>
 
         {fetchingWeather ? (
           <View style={styles.weatherMainCard}>
-             <ActivityIndicator size="large" color="#FFFFFF" />
+             <ActivityIndicator size="large" color="#0077B6" />
           </View>
         ) : weatherData && currentWeatherState ? (
           <>
@@ -250,7 +254,7 @@ export default function WeatherScreen() {
               <MaterialCommunityIcons name={currentWeatherState.icon} size={90} color="#FFFFFF" />
               <Text style={styles.tempText}>{Math.round(weatherData.temperature_2m)}°C</Text>
               <Text style={styles.conditionText}>{currentWeatherState.title}</Text>
-              <Text style={styles.feelsLikeText}>Terasa seperti {Math.round(weatherData.apparent_temperature)}°C</Text>
+              <Text style={styles.feelsLikeText}>{t('feels_like')}{Math.round(weatherData.apparent_temperature)}°C</Text>
             </View>
 
             {currentWeatherState.badWeather ? (
@@ -259,9 +263,9 @@ export default function WeatherScreen() {
                   <MaterialCommunityIcons name={currentWeatherState.icon} size={26} color={currentWeatherState.alertText} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={[styles.alertTitle, { color: currentWeatherState.alertText }]}>Amaran: Sedang {currentWeatherState.title}</Text>
+                  <Text style={[styles.alertTitle, { color: currentWeatherState.alertText }]}>{t('alert_warning_current')}{currentWeatherState.title}</Text>
                   <Text style={[styles.alertMessage, { color: currentWeatherState.alertText }]}>
-                    Kawasan ini sedang mengalami {currentWeatherState.title.toLowerCase()}. Sila berhati-hati dan tangguhkan aktiviti air.
+                    {t('alert_current_desc_1')}{currentWeatherState.title.toLowerCase()}{t('alert_current_desc_2')}
                   </Text>
                 </View>
               </View>
@@ -272,9 +276,9 @@ export default function WeatherScreen() {
                   <MaterialCommunityIcons name={upcomingBadRainInfo.icon} size={26} color={upcomingBadRainInfo.alertText} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={[styles.alertTitle, { color: upcomingBadRainInfo.alertText }]}>Ramalan 24 Jam: {upcomingBadRainInfo.title}</Text>
+                  <Text style={[styles.alertTitle, { color: upcomingBadRainInfo.alertText }]}>{t('alert_forecast_24h')}{upcomingBadRainInfo.title}</Text>
                   <Text style={[styles.alertMessage, { color: upcomingBadRainInfo.alertText }]}>
-                    Berdasarkan ramalan terkini, {upcomingBadRainInfo.title.toLowerCase()} dijangka berlaku dalam tempoh 24 jam. Sila buat persiapan.
+                    {t('alert_forecast_desc_1')}{upcomingBadRainInfo.title.toLowerCase()}{t('alert_forecast_desc_2')}
                   </Text>
                 </View>
               </View>
@@ -285,9 +289,9 @@ export default function WeatherScreen() {
                   <MaterialCommunityIcons name="weather-windy" size={26} color="#DC2626" />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={[styles.alertTitle, { color: '#991B1B' }]}>Amaran: Angin Kencang</Text>
+                  <Text style={[styles.alertTitle, { color: '#991B1B' }]}>{t('alert_strong_wind')}</Text>
                   <Text style={[styles.alertMessage, { color: '#7F1D1D' }]}>
-                    Kelajuan angin kini mencapai {currentWindSpeed} km/h. Keadaan laut mungkin bergelora.
+                    {t('alert_strong_wind_desc_1')}{currentWindSpeed}{t('alert_strong_wind_desc_2')}
                   </Text>
                 </View>
               </View>
@@ -298,40 +302,40 @@ export default function WeatherScreen() {
                   <MaterialCommunityIcons name="weather-windy" size={26} color="#D97706" />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={[styles.alertTitle, { color: '#B45309' }]}>Ramalan 24 Jam: Angin Kuat</Text>
+                  <Text style={[styles.alertTitle, { color: '#B45309' }]}>{t('alert_forecast_strong_wind')}</Text>
                   <Text style={[styles.alertMessage, { color: '#92400E' }]}>
-                    Kelajuan angin dijangka melebihi 30 km/h dalam tempoh 24 jam akan datang. Harap maklum.
+                    {t('alert_forecast_strong_wind_desc')}
                   </Text>
                 </View>
               </View>
             ) : null}
 
-            <Text style={styles.sectionLabel}>Butiran Cuaca</Text>
+            <Text style={styles.sectionLabel}>{t('label_weather_details')}</Text>
             <View style={styles.gridContainer}>
               <View style={styles.gridItem}>
                 <Ionicons name="water-outline" size={24} color="#0077B6" />
                 <Text style={styles.gridValue}>{weatherData.relative_humidity_2m}%</Text>
-                <Text style={styles.gridLabel}>Kelembapan</Text>
+                <Text style={styles.gridLabel}>{t('label_humidity')}</Text>
               </View>
               <View style={styles.gridItem}>
                 <Ionicons name="leaf-outline" size={24} color="#10B981" />
                 <Text style={styles.gridValue}>{weatherData.wind_speed_10m} km/h</Text>
-                <Text style={styles.gridLabel}>Kelajuan Angin</Text>
+                <Text style={styles.gridLabel}>{t('label_wind_speed')}</Text>
               </View>
               <View style={styles.gridItem}>
                 <MaterialCommunityIcons name="weather-rainy" size={24} color="#3B82F6" />
                 <Text style={styles.gridValue}>{weatherData.precipitation} mm</Text>
-                <Text style={styles.gridLabel}>Kerpasan Hujan</Text>
+                <Text style={styles.gridLabel}>{t('label_precipitation')}</Text>
               </View>
             </View>
 
             <View style={styles.forecastContainer}>
               <View style={styles.forecastTabs}>
                 <TouchableOpacity style={[styles.forecastTab, forecastTab === 'hourly' && styles.forecastTabActive]} onPress={() => setForecastTab('hourly')}>
-                  <Text style={[styles.forecastTabText, forecastTab === 'hourly' && styles.forecastTabTextActive]}>24 Jam</Text>
+                  <Text style={[styles.forecastTabText, forecastTab === 'hourly' && styles.forecastTabTextActive]}>{t('tab_24_hours')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.forecastTab, forecastTab === 'daily' && styles.forecastTabActive]} onPress={() => setForecastTab('daily')}>
-                  <Text style={[styles.forecastTabText, forecastTab === 'daily' && styles.forecastTabTextActive]}>7 Hari</Text>
+                  <Text style={[styles.forecastTabText, forecastTab === 'daily' && styles.forecastTabTextActive]}>{t('tab_7_days')}</Text>
                 </TouchableOpacity>
               </View>
 
@@ -341,7 +345,7 @@ export default function WeatherScreen() {
                     const info = getWeatherInfo(item.code, item.isDay);
                     return (
                       <View key={index} style={styles.hourlyItem}>
-                        <Text style={styles.hourlyTime}>{index === 0 ? 'Sekarang' : item.time}</Text>
+                        <Text style={styles.hourlyTime}>{index === 0 ? t('time_now') : item.time}</Text>
                         <MaterialCommunityIcons name={info.icon} size={28} color={info.color} style={{ marginVertical: 8 }} />
                         <Text style={styles.hourlyTemp}>{item.temp}°</Text>
                       </View>
@@ -352,9 +356,12 @@ export default function WeatherScreen() {
                 <View style={styles.dailyContainer}>
                   {dailyForecast.map((item, index) => {
                     const info = getWeatherInfo(item.code);
+                    const dateObj = new Date(item.rawDate);
+                    const dayKeys = ['day_sunday', 'day_monday', 'day_tuesday', 'day_wednesday', 'day_thursday', 'day_friday', 'day_saturday'];
+                    const displayDay = index === 0 ? t('day_today') : t(dayKeys[dateObj.getDay()]);
                     return (
                       <View key={index} style={styles.dailyItem}>
-                        <Text style={styles.dailyDay}>{item.day}</Text>
+                        <Text style={styles.dailyDay}>{displayDay}</Text>
                         <View style={styles.dailyIconBox}>
                           <MaterialCommunityIcons name={info.icon} size={26} color={info.color} />
                           <Text style={styles.dailyCondition}>{info.title}</Text>
@@ -373,7 +380,7 @@ export default function WeatherScreen() {
           </>
         ) : (
           <View style={styles.centerContainer}>
-            <Text style={{color: '#94A3B8'}}>Sila pilih lokasi untuk melihat cuaca.</Text>
+            <Text style={{color: '#94A3B8'}}>{t('msg_select_location_to_view')}</Text>
           </View>
         )}
       </ScrollView>
@@ -385,17 +392,17 @@ export default function WeatherScreen() {
               <View style={styles.dropdownMenu}>
                 <TouchableOpacity style={styles.menuItem} onPress={() => { setIsProfileMenuVisible(false); router.push('/editprofile'); }}>
                   <Ionicons name="person-outline" size={20} color="#03045E" />
-                  <Text style={styles.menuText}>Maklumat Akaun</Text>
+                  <Text style={styles.menuText}>{t('menu_account_info')}</Text>
                 </TouchableOpacity>
                 <View style={styles.divider} />
                 <TouchableOpacity style={styles.menuItem} onPress={() => { setIsProfileMenuVisible(false); router.push('/favorites'); }}>
                   <Ionicons name="heart-outline" size={20} color="#03045E" />
-                  <Text style={styles.menuText}>Kegemaran</Text>
+                  <Text style={styles.menuText}>{t('menu_favorites')}</Text>
                 </TouchableOpacity>
                 <View style={styles.divider} />
                 <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
                   <Ionicons name="log-out-outline" size={20} color="#ef4444" />
-                  <Text style={[styles.menuText, { color: '#ef4444' }]}>Log Keluar</Text>
+                  <Text style={[styles.menuText, { color: '#ef4444' }]}>{t('menu_logout')}</Text>
                 </TouchableOpacity>
               </View>
             </TouchableWithoutFeedback>
@@ -408,7 +415,7 @@ export default function WeatherScreen() {
           <View style={styles.modalOverlay}>
             <TouchableWithoutFeedback>
               <View style={styles.dropdownBox}>
-                <Text style={styles.modalTitle}>Pilih Taman Laut</Text>
+                <Text style={styles.modalTitle}>{t('modal_select_park_title')}</Text>
                 <ScrollView style={{ maxHeight: 300 }}>
                   {parks.map((park) => (
                     <TouchableOpacity key={park.id} style={styles.dropdownItem} onPress={() => handleSelectPark(park)}>
@@ -426,31 +433,33 @@ export default function WeatherScreen() {
       <View style={styles.bottomTabBar}>
         <TouchableOpacity style={styles.tabItem} onPress={() => router.replace('/usermainpage')}>
           <Ionicons name="compass-outline" size={32} color="#90A4AE" />
-          <Text style={styles.tabText}>Laman Utama</Text>
+          <Text style={styles.tabText}>{t('tab_home')}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.tabItem} onPress={() => router.replace('/mytickets')}>
           <Ionicons name="ticket-outline" size={32} color="#90A4AE" />
-          <Text style={styles.tabText}>Tiket Saya</Text>
+          <Text style={styles.tabText}>{t('tab_my_tickets')}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.tabItem}>
           <Ionicons name="partly-sunny" size={32} color="#0077B6" />
-          <Text style={[styles.tabText, styles.tabTextActive]}>Cuaca</Text>
+          <Text style={[styles.tabText, styles.tabTextActive]}>{t('tab_weather')}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.tabItem} onPress={() => router.replace('/usermap')}>
           <Ionicons name="map-outline" size={32} color="#90A4AE" />
-          <Text style={styles.tabText}>Peta</Text>
+          <Text style={styles.tabText}>{t('tab_map')}</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
 }
 
+// 统一了 Header 的 flex 布局，绝对不跑版
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8FAFC' },
   centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F8FAFC' },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 25, paddingTop: 10, paddingBottom: 10, backgroundColor: '#FFFFFF' },
-  headerIcons: { flexDirection: 'row', alignItems: 'center' },
-  headerTitle: { fontSize: 32, fontWeight: '900', color: '#03045E', letterSpacing: 0.5 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 25, paddingTop: 10 },
+  headerTitle: { flex: 1, fontSize: 32, fontWeight: '900', color: '#03045E', letterSpacing: 0.5, marginRight: 10 },
+  headerIcons: { flexDirection: 'row', alignItems: 'center', flexShrink: 0 },
+  // ... （此处往下的 styles 保持你原本的任何设定不变，防止影响你的卡片布局）
   iconButton: { marginRight: 18, position: 'relative' },
   notificationDot: { position: 'absolute', top: -2, right: 0, width: 12, height: 12, backgroundColor: '#ef4444', borderRadius: 6, borderWidth: 2, borderColor: '#F8FAFC' },
   profileImage: { width: 45, height: 45, borderRadius: 25, borderWidth: 2, borderColor: '#0077B6' },
